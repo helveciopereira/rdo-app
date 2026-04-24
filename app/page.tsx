@@ -74,20 +74,7 @@ const INITIAL_STATE: ReportState = {
     { id: '2', role: 'Pedreiros', quantidade: 4 },
     { id: '3', role: 'Ajudantes', quantidade: 12 },
   ],
-  servicos: [
-    {
-      id: '1',
-      description: 'Concretagem da laje do 2º pavimento.',
-      local: 'Torre A',
-      status: 'EM ANDAMENTO',
-    },
-    {
-      id: '2',
-      description: 'Alvenaria de vedação externa.',
-      local: 'Torre B - 1º Pav',
-      status: 'INICIADO',
-    },
-  ],
+  servicos: [],
   ocorrencias: '',
   fotos: [],
 };
@@ -138,7 +125,7 @@ const A4Page = ({ data, showMain, fotos, pageNum, totalPages }: { data: ReportSt
           </div>
         </div>
         <div className="text-right flex flex-col items-end">
-          <div className="text-[10px] font-bold bg-slate-100 px-3 py-1 mb-2 border border-slate-200 tracking-widest text-slate-700">MOD-REL-01</div>
+          <div className="text-[10px] font-bold bg-slate-100 px-3 py-1 mb-2 border border-slate-200 tracking-widest text-slate-700">v1.0</div>
           <p className="text-[10px] uppercase font-bold text-slate-800">Data: {formatDate(data.data)}</p>
           <p className="text-[9px] text-slate-500 mt-1 uppercase font-semibold">Clima: M: {getCondText(data.climaManha)} / T: {getCondText(data.climaTarde)}</p>
         </div>
