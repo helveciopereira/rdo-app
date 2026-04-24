@@ -34,7 +34,7 @@ interface Service {
   id: string;
   description: string;
   local: string;
-  status: 'INICIADO' | 'EM ANDAMENTO' | 'CONCLUÍDO' | 'ATRASADO';
+  status: 'INICIADO' | 'EM ANDAMENTO' | 'CONCLUÍDO';
 }
 
 interface PhotoRecord {
@@ -61,18 +61,18 @@ interface ReportState {
 /* ================= CONSTANTS & DEFAULTS ================= */
 
 const INITIAL_STATE: ReportState = {
-  obra: 'Edifício Horizon',
-  empresa: ' Pollux Construções S.A.',
+  obra: 'Centro de Eventos - UEMA',
+  empresa: 'Pollux Construções Ltda',
   data: new Date().toISOString().split('T')[0],
-  responsavel: 'Eng. Carlos Mendes',
-  crea: '123456',
-  logoUrl: null,
+  responsavel: 'Eng. Licínio Crasso Ramos Correa Junior',
+  crea: '0614520720',
+  logoUrl: 'pollux-logo.png',
   climaManha: 'sunny',
   climaTarde: 'cloudy',
   efetivo: [
-    { id: '1', role: 'Engenheiros / Encarregados', quantidade: 2 },
-    { id: '2', role: 'Pedreiros', quantidade: 19 },
-    { id: '3', role: 'Ajudantes', quantidade: 10 },
+    { id: '1', role: 'Engenheiros', quantidade: 1 },
+    { id: '2', role: 'Pedreiros', quantidade: 4 },
+    { id: '3', role: 'Ajudantes', quantidade: 12 },
   ],
   servicos: [
     {
@@ -96,7 +96,6 @@ const STATUS_COLORS = {
   'INICIADO': 'text-blue-600',
   'EM ANDAMENTO': 'text-amber-500',
   'CONCLUÍDO': 'text-green-600',
-  'ATRASADO': 'text-red-600',
 };
 
 /* ================= HELPERS ================= */
@@ -124,7 +123,7 @@ const A4Page = ({ data, showMain, fotos, pageNum, totalPages }: { data: ReportSt
   return (
     <div className="w-[210mm] min-h-[297mm] bg-white text-slate-900 shadow-2xl mx-auto flex flex-col p-10 ring-1 ring-black/10 origin-top print:shadow-none print:w-full print:h-[auto] print:m-0 print:p-[5mm] print:ring-0 text-[11px] leading-relaxed relative print:break-after-page page-break-after-always shrink-0 bg-white">
       <div className="absolute top-4 left-1/2 -translate-x-1/2 text-slate-300 text-[8px] font-mono tracking-widest print:hidden">VISUALIZAÇÃO A4 - PÁGINA {pageNum}</div>
-      
+
       {/* Header */}
       <header className="border-b-2 border-slate-900 pb-4 mb-6 flex items-start justify-between mt-4 shrink-0">
         <div className="flex gap-4 items-center">
@@ -151,7 +150,7 @@ const A4Page = ({ data, showMain, fotos, pageNum, totalPages }: { data: ReportSt
           <>
             <div className="mb-8 shrink-0">
               <h4 className="text-[11px] font-black border-b border-slate-200 mb-2 pb-1 uppercase tracking-widest">Obra: {data.obra || 'Não informado'}</h4>
-              <p className="text-[10px] leading-relaxed text-slate-600 italic">Resp. Técnico: {data.responsavel} {data.crea ? `- CREA/CAU: ${data.crea}` : ''}</p>
+              <p className="text-[10px] leading-relaxed text-slate-600 italic">Resp. Técnico: {data.responsavel} {data.crea ? `- CREA: ${data.crea}` : ''}</p>
             </div>
 
             {/* 1. Serviços */}
@@ -278,12 +277,12 @@ const A4Document = ({ data }: { data: ReportState }) => {
 
   const firstPageFotos = data.fotos.slice(0, MAX_PHOTOS_PAGE_1);
   const remainingFotos = data.fotos.slice(MAX_PHOTOS_PAGE_1);
-  
+
   const remainingPhotoChunks = [];
   for (let i = 0; i < remainingFotos.length; i += MAX_PHOTOS_PAGE_N) {
     remainingPhotoChunks.push(remainingFotos.slice(i, i + MAX_PHOTOS_PAGE_N));
   }
-  
+
   const totalPages = 1 + remainingPhotoChunks.length;
 
   return (
@@ -368,7 +367,7 @@ export default function DailyReportApp() {
   const handleSaveToDatabase = async () => {
     try {
       setIsSaving(true);
-      
+
       let obraId = null;
       if (report.obra) {
         const { data: obraData, error: obraError } = await supabase
@@ -381,7 +380,7 @@ export default function DailyReportApp() {
           })
           .select()
           .single();
-          
+
         if (obraError) {
           console.error("Erro ao inserir obra:", obraError);
         } else {
@@ -402,7 +401,7 @@ export default function DailyReportApp() {
         .single();
 
       if (relatorioError) throw relatorioError;
-      
+
       const relatorioId = relatorioData.id;
 
       if (report.efetivo.length > 0) {
@@ -411,11 +410,11 @@ export default function DailyReportApp() {
           funcao: ef.role,
           quantidade: ef.quantidade
         }));
-        
+
         const { error: efetivoError } = await supabase
           .from('efetivos_obra')
           .insert(efetivosToInsert);
-          
+
         if (efetivoError) throw efetivoError;
       }
 
@@ -426,11 +425,11 @@ export default function DailyReportApp() {
           local: srv.local,
           status: srv.status
         }));
-        
+
         const { error: servicoError } = await supabase
           .from('servicos_executados')
           .insert(servicosToInsert);
-          
+
         if (servicoError) throw servicoError;
       }
 
@@ -446,7 +445,7 @@ export default function DailyReportApp() {
   return (
     <>
       <div className="no-print h-screen flex flex-col overflow-hidden bg-slate-950 font-sans text-slate-200">
-        
+
         {/* Header Navigation (Editorial Aesthetic) */}
         <nav className="h-16 border-b border-slate-800 bg-slate-900/50 backdrop-blur-md flex items-center justify-between px-4 md:px-8 shrink-0 z-10">
           <div className="flex items-center gap-3">
@@ -477,25 +476,25 @@ export default function DailyReportApp() {
         </nav>
 
         <div className="flex flex-1 overflow-hidden relative">
-          
+
           {/* ================= LEFT SIDE: FORM ================= */}
           <aside className={`w-full lg:w-[380px] xl:w-[420px] bg-slate-900/40 border-r border-slate-800 flex flex-col ${viewMode === 'form' ? 'flex' : 'hidden lg:flex'}`}>
             <div className="flex-1 overflow-y-auto p-6 space-y-8 pb-32 lg:pb-8">
-              
+
               {/* 1. Dados Principais */}
               <div className="space-y-4">
                 <h2 className="text-xs font-bold uppercase tracking-widest text-blue-400">Dados Principais</h2>
                 <div className="space-y-3">
                   <div className="flex flex-col gap-1">
                     <label className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Nome da Obra</label>
-                    <input 
+                    <input
                       type="text" value={report.obra} onChange={(e) => handleChange('obra', e.target.value)}
                       className="bg-slate-800 border border-slate-700 rounded p-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none text-white w-full transition-colors"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Empresa</label>
-                    <input 
+                    <input
                       type="text" value={report.empresa} onChange={(e) => handleChange('empresa', e.target.value)}
                       className="bg-slate-800 border border-slate-700 rounded p-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none text-white w-full transition-colors"
                     />
@@ -503,30 +502,30 @@ export default function DailyReportApp() {
                   <div className="flex gap-3">
                     <div className="flex flex-col gap-1 flex-1">
                       <label className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Data</label>
-                      <input 
+                      <input
                         type="date" value={report.data} onChange={(e) => handleChange('data', e.target.value)}
                         className="bg-slate-800 border border-slate-700 rounded p-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none text-white w-full"
                       />
                     </div>
                     <div className="flex flex-col gap-1">
-                       <label className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Logo</label>
-                       <label className="bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded p-2 text-sm text-center text-blue-400 cursor-pointer transition-colors w-20 flex justify-center items-center">
-                         <span className="truncate">{report.logoUrl ? 'Trocar' : 'Envio'}</span>
-                         <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'logo')} className="hidden" />
-                       </label>
+                      <label className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Logo</label>
+                      <label className="bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded p-2 text-sm text-center text-blue-400 cursor-pointer transition-colors w-20 flex justify-center items-center">
+                        <span className="truncate">{report.logoUrl ? 'Trocar' : 'Envio'}</span>
+                        <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'logo')} className="hidden" />
+                      </label>
                     </div>
                   </div>
                   <div className="flex gap-3">
                     <div className="flex flex-col gap-1 flex-1">
                       <label className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Resp. Técnico</label>
-                      <input 
+                      <input
                         type="text" value={report.responsavel} onChange={(e) => handleChange('responsavel', e.target.value)}
                         className="bg-slate-800 border border-slate-700 rounded p-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none text-white w-full"
                       />
                     </div>
                     <div className="flex flex-col gap-1 flex-1">
-                      <label className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">CREA / CAU</label>
-                      <input 
+                      <label className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">CREA</label>
+                      <input
                         type="text" value={report.crea} onChange={(e) => handleChange('crea', e.target.value)}
                         className="bg-slate-800 border border-slate-700 rounded p-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none text-white w-full"
                       />
@@ -585,18 +584,18 @@ export default function DailyReportApp() {
                 <div className="space-y-2">
                   {report.efetivo.map((ef) => (
                     <div key={ef.id} className="flex gap-2 items-center bg-slate-800/20 p-2 border border-slate-800 rounded">
-                      <input 
+                      <input
                         type="text" list="roles-list" value={ef.role} onChange={e => updateEfetivo(ef.id, 'role', e.target.value)} placeholder="Função"
                         className="flex-1 bg-transparent border-none outline-none text-sm focus:ring-0 px-1" />
                       <div className="flex items-center gap-2">
                         <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Qtd:</span>
                         <input type="number" value={ef.quantidade} onChange={e => updateEfetivo(ef.id, 'quantidade', parseInt(e.target.value) || 0)} className="w-14 bg-slate-800 border border-slate-700 rounded text-center text-sm p-1 outline-none focus:border-blue-500" />
                       </div>
-                      <button onClick={() => removeEfetivo(ef.id)} className="p-1 text-slate-500 hover:text-red-400"><X size={14}/></button>
+                      <button onClick={() => removeEfetivo(ef.id)} className="p-1 text-slate-500 hover:text-red-400"><X size={14} /></button>
                     </div>
                   ))}
                   <button onClick={addEfetivo} className="w-full bg-slate-800/50 hover:bg-slate-800 border border-slate-700 border-dashed text-blue-400 text-sm py-2 rounded flex items-center justify-center gap-2 transition-colors mt-2">
-                    <Plus size={16}/> Adicionar Efetivo
+                    <Plus size={16} /> Adicionar Efetivo
                   </button>
                 </div>
               </div>
@@ -604,33 +603,40 @@ export default function DailyReportApp() {
               {/* 4. Serviços */}
               <div className="space-y-4">
                 <h2 className="text-xs font-bold uppercase tracking-widest text-blue-400">Serviços</h2>
+                <datalist id="locais-list">
+                  <option value="Salão principal" />
+                  <option value="Banheiro PCD" />
+                  <option value="Caixa d'água" />
+                  <option value="Externo" />
+                  <option value="Diretoria" />
+                  <option value="Corredores" />
+                </datalist>
                 <div className="space-y-3">
                   {report.servicos.map((srv) => (
                     <div key={srv.id} className="flex flex-col gap-2 bg-slate-800/20 p-3 border border-slate-800 rounded relative">
-                      <button onClick={() => removeServico(srv.id)} className="absolute top-2 right-2 text-slate-500 hover:text-red-400"><X size={14}/></button>
-                      <input 
-                        type="text" value={srv.description} onChange={e => updateServico(srv.id, 'description', e.target.value)} 
-                        className="bg-slate-800 border border-slate-700 rounded py-1.5 px-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none w-[90%]" placeholder="Descrição" 
+                      <button onClick={() => removeServico(srv.id)} className="absolute top-2 right-2 text-slate-500 hover:text-red-400"><X size={14} /></button>
+                      <input
+                        type="text" value={srv.description} onChange={e => updateServico(srv.id, 'description', e.target.value)}
+                        className="bg-slate-800 border border-slate-700 rounded py-1.5 px-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none w-[90%]" placeholder="Descrição"
                       />
                       <div className="flex gap-2">
-                        <input 
-                          type="text" value={srv.local} onChange={e => updateServico(srv.id, 'local', e.target.value)} 
-                          className="flex-1 bg-slate-800 border border-slate-700 rounded py-1px px-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none" placeholder="Local" 
+                        <input
+                          type="text" list="locais-list" value={srv.local} onChange={e => updateServico(srv.id, 'local', e.target.value)}
+                          className="flex-1 bg-slate-800 border border-slate-700 rounded py-1px px-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none" placeholder="Local"
                         />
-                        <select 
+                        <select
                           value={srv.status} onChange={e => updateServico(srv.id, 'status', e.target.value)}
                           className="w-28 bg-slate-800 border border-slate-700 rounded py-1.5 px-1 text-[10px] font-bold tracking-widest uppercase focus:ring-1 focus:ring-blue-500 outline-none text-slate-300"
                         >
                           <option value="INICIADO">INICIADO</option>
                           <option value="EM ANDAMENTO">ANDAMENTO</option>
                           <option value="CONCLUÍDO">CONCLUÍDO</option>
-                          <option value="ATRASADO">ATRASADO</option>
                         </select>
                       </div>
                     </div>
                   ))}
                   <button onClick={addServico} className="w-full bg-slate-800/50 hover:bg-slate-800 border border-slate-700 border-dashed text-blue-400 text-sm py-2 rounded flex items-center justify-center gap-2 transition-colors">
-                    <Plus size={16}/> Adicionar Serviço
+                    <Plus size={16} /> Adicionar Serviço
                   </button>
                 </div>
               </div>
@@ -638,7 +644,7 @@ export default function DailyReportApp() {
               {/* 5. Ocorrências */}
               <div className="space-y-4">
                 <h2 className="text-xs font-bold uppercase tracking-widest text-blue-400">Ocorrências</h2>
-                <textarea 
+                <textarea
                   value={report.ocorrencias} onChange={e => handleChange('ocorrencias', e.target.value)}
                   className="w-full bg-slate-800 border border-slate-700 rounded p-3 text-sm focus:ring-1 focus:ring-blue-500 outline-none min-h-[100px] resize-none" placeholder="Relatar faltas, clima extremo..."
                 />
@@ -651,10 +657,10 @@ export default function DailyReportApp() {
                   {report.fotos.map(foto => (
                     <div key={foto.id} className="relative group">
                       <img src={foto.url} alt="Envio" className="w-full aspect-video object-cover rounded border border-slate-700 opacity-80 group-hover:opacity-100 transition-opacity" />
-                      <button onClick={() => removeFoto(foto.id)} className="absolute top-1 right-1 bg-red-600 w-5 h-5 rounded flex items-center justify-center text-white p-0.5"><X size={12}/></button>
-                      <input 
-                        type="text" value={foto.caption} onChange={e => updateFotoCaption(foto.id, e.target.value)} placeholder="Legenda..." 
-                        className="absolute bottom-0 w-full bg-slate-900/90 text-[10px] px-2 py-1 outline-none placeholder:text-slate-500" 
+                      <button onClick={() => removeFoto(foto.id)} className="absolute top-1 right-1 bg-red-600 w-5 h-5 rounded flex items-center justify-center text-white p-0.5"><X size={12} /></button>
+                      <input
+                        type="text" value={foto.caption} onChange={e => updateFotoCaption(foto.id, e.target.value)} placeholder="Legenda..."
+                        className="absolute bottom-0 w-full bg-slate-900/90 text-[10px] px-2 py-1 outline-none placeholder:text-slate-500"
                       />
                     </div>
                   ))}
@@ -676,23 +682,23 @@ export default function DailyReportApp() {
                 <ArrowLeft size={16} /> Voltar
               </button>
             )}
-            
+
             {/* The Actual Display Paper Element */}
             <div className="w-full origin-top transition-transform duration-300 scale-[0.55] sm:scale-[0.75] md:scale-[0.80] lg:scale-[0.85] xl:scale-100 flex flex-col items-center pb-32 mb-32 shrink-0">
-               <A4Document data={report} />
+              <A4Document data={report} />
             </div>
           </main>
 
           {/* ================= MOBILE BOTTOM BAR ================= */}
           <div className="absolute bottom-0 left-0 right-0 p-4 bg-slate-900/90 backdrop-blur-lg border-t border-slate-800 z-40 lg:hidden flex gap-2">
-            <button 
+            <button
               onClick={() => setViewMode(viewMode === 'form' ? 'preview' : 'form')}
               className="flex-1 bg-slate-800 border border-slate-700 hover:bg-slate-700 text-sm font-bold uppercase tracking-widest py-3 rounded text-slate-300 transition-colors"
             >
               {viewMode === 'form' ? 'Ver A4' : 'Editar'}
             </button>
             {viewMode === 'preview' && (
-              <button 
+              <button
                 onClick={handlePrint}
                 className="flex-1 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold uppercase tracking-widest py-3 rounded shadow-lg shadow-blue-900/20"
               >
@@ -706,7 +712,7 @@ export default function DailyReportApp() {
 
       {/* ================= HIDDEN PRINT DOM ================= */}
       <div className="hidden print:block fixed inset-0 z-50 bg-white">
-         <A4Document data={report} />
+        <A4Document data={report} />
       </div>
     </>
   );
