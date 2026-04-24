@@ -70,9 +70,9 @@ const INITIAL_STATE: ReportState = {
   climaManha: 'sunny',
   climaTarde: 'cloudy',
   efetivo: [
-    { id: '1', role: 'Engenheiros', quantidade: 1 },
-    { id: '2', role: 'Pedreiros', quantidade: 4 },
-    { id: '3', role: 'Ajudantes', quantidade: 12 },
+    { id: '1', role: 'Engenheiro', quantidade: 1 },
+    { id: '2', role: 'Pedreiro', quantidade: 4 },
+    { id: '3', role: 'Ajudante', quantidade: 12 },
   ],
   servicos: [],
   ocorrencias: '',
@@ -440,7 +440,7 @@ export default function DailyReportApp() {
               <div className="w-4 h-4 border-2 border-white"></div>
             </div>
             <span className="font-bold tracking-tight text-lg text-white">
-              CONSTRUMANAGE <span className="font-light opacity-50 text-sm hidden sm:inline">PRO</span>
+              EXPOL <span className="font-light opacity-50 text-sm hidden sm:inline">PRO</span>
             </span>
           </div>
           <div className="flex gap-2">
