@@ -1,0 +1,181 @@
+/* v0.1 */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  /* Cores Principais - Sóbrias e Sérias */
+  --bg-color: #0d1117; /* Fundo principal extramente escuro */
+  --panel-bg: rgba(22, 27, 34, 0.65); /* Painéis Translúcidos */
+  --panel-border: rgba(255, 255, 255, 0.08);
+  
+  --primary-color: #2f81f7; /* Azul Vivo moderno */
+  --primary-hover: #388bfd;
+  --text-main: #c9d1d9; /* Cinza claro suave ao invés de branco puro para leitura longa */
+  --text-muted: #8b949e;
+  
+  --glass-blur: blur(12px);
+  --shadow-main: 0 8px 32px rgba(0, 0, 0, 0.3);
+  
+  /* Tamanhos e Transições */
+  --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  --radius: 12px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+body {
+  background-color: var(--bg-color);
+  background-image: radial-gradient(circle at top right, rgba(47, 129, 247, 0.05), transparent 40%),
+                    radial-gradient(circle at bottom left, rgba(47, 129, 247, 0.05), transparent 40%);
+  color: var(--text-main);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar Customizada */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-color);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(139, 148, 158, 0.3);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 148, 158, 0.5);
+}
+
+/* Glassmorphism Panels */
+.glass-panel {
+  background: var(--panel-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-main);
+}
+
+/* Textos e Titulos */
+h1, h2, h3, h4 {
+  color: #fff;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+p {
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* Componentes de Formulário (Modernos) */
+.form-group {
+  margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.form-input, .form-textarea {
+  background: rgba(13, 17, 23, 0.8);
+  border: 1px solid var(--panel-border);
+  color: var(--text-main);
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  transition: var(--transition);
+  outline: none;
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.form-input:focus, .form-textarea:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(47, 129, 247, 0.2);
+  background: rgba(13, 17, 23, 1);
+}
+
+/* Botões Modernos e Vivos */
+.btn {
+  background: transparent;
+  color: var(--text-main);
+  border: 1px solid var(--panel-border);
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  transform: translateY(-1px);
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn-primary {
+  background: var(--primary-color);
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 4px 14px rgba(47, 129, 247, 0.4);
+}
+
+.btn-primary:hover {
+  background: var(--primary-hover);
+  box-shadow: 0 6px 20px rgba(47, 129, 247, 0.5);
+}
+
+/* Grid A4 Específico (O que será exportado para PDF) */
+/* A página será renderizada em braco com texto preto para o PDF ficar limpo */
+
+.a4-wrapper {
+  background: #fff;
+  color: #000;
+  width: 210mm; /* A4 width */
+  min-height: 297mm; /* A4 height */
+  margin: 0 auto;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  padding: 20mm; /* Margens internas padrão A4 */
+  box-sizing: border-box;
+}
+
+/* Classes para PDF */
+.pdf-container h1, .pdf-container h2, .pdf-container h3, .pdf-container p {
+  color: #000; /* Força cor preta no PDF */
+}
+
+/* Utilitários Visuais */
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
