@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, Suspense } from 'react';
 import {
   Sun,
   Cloud,
@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/src/lib/supabase';
 import ProtectedRoute from '@/src/components/ProtectedRoute';
-import { useParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 
 const resizeImageClientSide = (file: File, maxWidth: number, maxHeight: number): Promise<Blob> => {
   return new Promise((resolve, reject) => {
@@ -322,10 +322,10 @@ const A4Document = ({ data }: { data: ReportState }) => {
 
 /* ================= MAIN APP ================= */
 
-export default function DailyReportApp() {
-  const params = useParams();
-  const rdoId = params?.id as string;
-  const isEditing = rdoId && rdoId !== 'novo';
+function DailyReportApp() {
+  const searchParams = useSearchParams();
+  const rdoId = searchParams.get('id');
+  const isEditing = !!rdoId;
 
   const [report, setReport] = useState<ReportState>(INITIAL_STATE);
   const [viewMode, setViewMode] = useState<'form' | 'preview'>(isEditing ? 'preview' : 'form');
@@ -858,5 +858,13 @@ export default function DailyReportApp() {
         <A4Document data={report} />
       </div>
     </ProtectedRoute>
+  );
+}
+
+export default function DailyReportPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen bg-slate-950 text-white font-bold tracking-widest uppercase">Carregando RDO...</div>}>
+      <DailyReportApp />
+    </Suspense>
   );
 }

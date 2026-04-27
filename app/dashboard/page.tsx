@@ -117,7 +117,7 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   <div className="flex gap-2 mt-4 pt-4 border-t border-slate-800/50">
-                    <button onClick={() => router.push(`/rdo/${rdo.id}`)} className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 py-1.5 rounded text-[10px] font-bold uppercase tracking-widest transition-colors">
+                    <button onClick={() => router.push(`/rdo/novo?id=${rdo.id}`)} className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 py-1.5 rounded text-[10px] font-bold uppercase tracking-widest transition-colors">
                       Visualizar
                     </button>
                     {/* Futuramente, editar relatórios: router.push(`/rdo/editar/${rdo.id}`) */}
