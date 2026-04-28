@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/src/lib/supabase';
 import ProtectedRoute from '@/src/components/ProtectedRoute';
 import { useAuth } from '@/src/contexts/AuthContext';
-import { Plus, FileText, Calendar, Building2, LogOut, Trash2, History, X, ArrowLeft } from 'lucide-react';
+import { Plus, FileText, Calendar, Building2, LogOut, Trash2, History, X, ArrowLeft, Printer, CheckSquare, Square } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function DashboardPage() {
@@ -12,6 +12,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [showLogs, setShowLogs] = useState(false);
   const [logs, setLogs] = useState<any[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const { signOut, user, role } = useAuth();
   const router = useRouter();
 
@@ -46,6 +47,35 @@ export default function DashboardPage() {
     if (!dateStr) return '';
     const [y, m, d] = dateStr.split('-');
     return `${d}/${m}/${y}`;
+  };
+
+  const getMonthYear = (dateStr: string) => {
+    if (!dateStr) return '';
+    const [y, m] = dateStr.split('-');
+    const months = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
+    return `${months[parseInt(m) - 1]}/${y}`;
+  };
+
+  const availableMonths = Array.from(new Set(relatorios.map(r => getMonthYear(r.data_relatorio))));
+
+  const handleSelectMonth = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const monthYear = e.target.value;
+    if (!monthYear) {
+      setSelectedIds([]);
+      return;
+    }
+    const idsInMonth = relatorios.filter(r => getMonthYear(r.data_relatorio) === monthYear).map(r => r.id);
+    setSelectedIds(idsInMonth);
+  };
+
+  const toggleSelection = (id: string) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  };
+
+  const handleGerarLote = () => {
+    if (selectedIds.length === 0) return;
+    localStorage.setItem('rdo_batch_print_ids', JSON.stringify(selectedIds));
+    router.push('/rdo/lote');
   };
 
   const handleDelete = async (id: string) => {
@@ -114,6 +144,23 @@ export default function DashboardPage() {
               <p className="text-sm text-slate-400 mt-1">Gerencie os relatórios diários das suas obras.</p>
             </div>
             <div className="flex gap-2">
+              {availableMonths.length > 0 && (
+                <select 
+                  onChange={handleSelectMonth}
+                  className="bg-slate-800 text-slate-300 px-3 py-2 rounded-md text-sm border border-slate-700 outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="">Selecionar Mês...</option>
+                  {availableMonths.map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+              )}
+              {selectedIds.length > 0 && (
+                <button 
+                  onClick={handleGerarLote}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-md text-sm font-bold shadow-lg shadow-emerald-900/20 flex items-center gap-2 uppercase tracking-widest transition-colors"
+                >
+                  <Printer size={16} /> Lote ({selectedIds.length})
+                </button>
+              )}
               {role === 'master' && (
                 <button 
                   onClick={fetchLogs}
@@ -154,19 +201,24 @@ export default function DashboardPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {relatorios.map((rdo) => (
-                <div key={rdo.id} className="bg-slate-900 border border-slate-800 rounded-lg p-5 hover:border-blue-500/50 transition-colors group relative overflow-hidden">
-                  <div className="absolute top-0 left-0 w-1 h-full bg-slate-800 group-hover:bg-blue-500 transition-colors"></div>
+                <div key={rdo.id} className={`bg-slate-900 border ${selectedIds.includes(rdo.id) ? 'border-emerald-500' : 'border-slate-800 hover:border-blue-500/50'} rounded-lg p-5 transition-colors group relative overflow-hidden cursor-pointer`} onClick={() => toggleSelection(rdo.id)}>
+                  <div className={`absolute top-0 left-0 w-1 h-full transition-colors ${selectedIds.includes(rdo.id) ? 'bg-emerald-500' : 'bg-slate-800 group-hover:bg-blue-500'}`}></div>
                   <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <h3 className="font-bold text-slate-200 text-lg">{rdo.obras?.nome || 'Obra não especificada'}</h3>
-                      <p className="text-xs text-slate-500 mt-1 uppercase tracking-wider">{rdo.obras?.empresa || 'Empresa'}</p>
+                    <div className="flex gap-3">
+                      <div className="mt-1" onClick={(e) => { e.stopPropagation(); toggleSelection(rdo.id); }}>
+                        {selectedIds.includes(rdo.id) ? <CheckSquare size={18} className="text-emerald-500" /> : <Square size={18} className="text-slate-500 group-hover:text-slate-400" />}
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-slate-200 text-lg">{rdo.obras?.nome || 'Obra não especificada'}</h3>
+                        <p className="text-xs text-slate-500 mt-1 uppercase tracking-wider">{rdo.obras?.empresa || 'Empresa'}</p>
+                      </div>
                     </div>
-                    <div className="bg-slate-800 p-2 rounded flex flex-col items-center">
+                    <div className="bg-slate-800 p-2 rounded flex flex-col items-center shrink-0">
                       <Calendar size={14} className="text-blue-400 mb-1" />
                       <span className="text-[10px] font-bold">{formatDate(rdo.data_relatorio)}</span>
                     </div>
                   </div>
-                  <div className="flex gap-2 mt-4 pt-4 border-t border-slate-800/50">
+                  <div className="flex gap-2 mt-4 pt-4 border-t border-slate-800/50" onClick={e => e.stopPropagation()}>
                     <button onClick={() => router.push(`/rdo/novo?id=${rdo.id}`)} className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 py-1.5 rounded text-[10px] font-bold uppercase tracking-widest transition-colors">
                       Visualizar
                     </button>
