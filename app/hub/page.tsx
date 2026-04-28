@@ -52,15 +52,15 @@ export default function HubPage() {
               <p className="text-xs text-slate-400 mt-1 uppercase tracking-widest font-semibold">Relatório Diário de Obras</p>
             </button>
 
-            {/* Card: ToDo */}
+            {/* Card: 2Do */}
             <button 
-              onClick={() => router.push('/todo')}
+              onClick={() => router.push('/2do')}
               className="bg-slate-900/80 border border-slate-800 hover:border-emerald-500/50 hover:bg-slate-800/80 transition-all rounded-xl p-6 flex flex-col items-center justify-center text-center group cursor-pointer h-48"
             >
               <div className="w-16 h-16 bg-emerald-600/10 text-emerald-500 rounded-full flex items-center justify-center mb-4 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
                 <ListTodo size={32} />
               </div>
-              <h2 className="text-lg font-bold text-white tracking-wide">ToDo</h2>
+              <h2 className="text-lg font-bold text-white tracking-wide">2Do</h2>
               <p className="text-xs text-slate-400 mt-1 uppercase tracking-widest font-semibold">Gestão de Atividades</p>
             </button>
 

@@ -11,11 +11,11 @@ interface Tarefa {
   id: string;
   user_id: string;
   descricao: string;
-  status: 'POR_FAZER' | 'ANDAMENTO' | 'CONCLUIDA';
+  status: 'POR_FAZER' | 'ANDAMENTO' | 'CONCLUIDA' | 'EXCLUIDA';
   created_at: string;
 }
 
-export default function ToDoPage() {
+export default function Do2Page() {
   const [tarefas, setTarefas] = useState<Tarefa[]>([]);
   const [novaTarefa, setNovaTarefa] = useState('');
   const [loading, setLoading] = useState(true);
@@ -32,6 +32,8 @@ export default function ToDoPage() {
       const { data, error } = await supabase
         .from('tarefas')
         .select('*')
+        .neq('status', 'CONCLUIDA')
+        .neq('status', 'EXCLUIDA')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -83,7 +85,7 @@ export default function ToDoPage() {
 
   const handleDelete = async (id: string) => {
     try {
-      const { error } = await supabase.from('tarefas').delete().eq('id', id);
+      const { error } = await supabase.from('tarefas').update({ status: 'EXCLUIDA' }).eq('id', id);
       if (error) throw error;
       setTarefas(prev => prev.filter(t => t.id !== id));
     } catch (error) {
@@ -104,7 +106,7 @@ export default function ToDoPage() {
             <span className="font-bold tracking-tight text-lg text-white">
               EXPOL <span className="font-light opacity-50 text-sm hidden sm:inline">PRO</span>
             </span>
-            <span className="bg-slate-800 text-[10px] uppercase tracking-widest font-bold px-2 py-1 rounded ml-2 border border-slate-700">ToDo</span>
+            <span className="bg-slate-800 text-[10px] uppercase tracking-widest font-bold px-2 py-1 rounded ml-2 border border-slate-700">2Do</span>
           </div>
           <div className="flex items-center gap-4">
             <button 
@@ -145,8 +147,9 @@ export default function ToDoPage() {
           <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-2xl flex-1 flex flex-col">
             <div className="bg-slate-800/50 p-4 border-b border-slate-800 flex justify-between items-center">
               <h2 className="text-xs font-bold uppercase tracking-widest text-emerald-400">Suas Tarefas</h2>
-              <div className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">
-                {tarefas.filter(t => t.status === 'CONCLUIDA').length} / {tarefas.length} Concluídas
+              <div className="flex gap-2">
+                <button onClick={() => router.push('/2do/excluidas')} className="bg-red-900/30 text-red-500 border border-red-900/50 hover:bg-red-900/50 px-3 py-1.5 rounded text-[10px] uppercase font-bold tracking-widest transition-colors">Excluídas</button>
+                <button onClick={() => router.push('/2do/concluidas')} className="bg-emerald-900/30 text-emerald-500 border border-emerald-900/50 hover:bg-emerald-900/50 px-3 py-1.5 rounded text-[10px] uppercase font-bold tracking-widest transition-colors">Concluídas</button>
               </div>
             </div>
             
@@ -188,6 +191,7 @@ export default function ToDoPage() {
                           <option value="POR_FAZER">Por Fazer</option>
                           <option value="ANDAMENTO">Andamento</option>
                           <option value="CONCLUIDA">Concluída</option>
+                          <option value="EXCLUIDA">Excluída</option>
                         </select>
 
                         <button 
