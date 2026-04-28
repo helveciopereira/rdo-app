@@ -20,7 +20,8 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/src/lib/supabase';
 import ProtectedRoute from '@/src/components/ProtectedRoute';
-import { useSearchParams } from 'next/navigation';
+import { useAuth } from '@/src/contexts/AuthContext';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 const resizeImageClientSide = (file: File, maxWidth: number, maxHeight: number): Promise<Blob> => {
   return new Promise((resolve, reject) => {
@@ -163,7 +164,7 @@ const A4Page = ({ data, showMain, fotos, pageNum, totalPages }: { data: ReportSt
           </div>
         </div>
         <div className="text-right flex flex-col items-end">
-          <div className="text-[10px] font-bold bg-slate-100 px-3 py-1 mb-2 border border-slate-200 tracking-widest text-slate-700">v1.0</div>
+          <div className="text-[10px] font-bold bg-slate-100 px-3 py-1 mb-2 border border-slate-200 tracking-widest text-slate-700">v1.21</div>
           <p className="text-[10px] uppercase font-bold text-slate-800">Data: {formatDate(data.data)}</p>
           <p className="text-[9px] text-slate-500 mt-1 uppercase font-semibold">Clima: M: {getCondText(data.climaManha)} / T: {getCondText(data.climaTarde)}</p>
         </div>
@@ -324,6 +325,8 @@ const A4Document = ({ data }: { data: ReportState }) => {
 
 function DailyReportApp() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const { user, role } = useAuth();
   const rdoId = searchParams.get('id');
   const isEditing = !!rdoId;
 
@@ -340,6 +343,8 @@ function DailyReportApp() {
         if (confirm('Você possui um rascunho salvo não finalizado. Deseja restaurar os dados?')) {
           try {
             setReport(JSON.parse(draft));
+            setIsLoaded(true);
+            return;
           } catch (e) {
             console.error("Failed to parse draft", e);
           }
@@ -347,9 +352,54 @@ function DailyReportApp() {
           localStorage.removeItem('rdo_draft');
         }
       }
-      setIsLoaded(true);
+      
+      // Se não for edição e não houver rascunho (ou for rejeitado), busca o último RDO
+      fetchLastRDO();
     }
   }, [rdoId, isEditing]);
+
+  const fetchLastRDO = async () => {
+    try {
+      const { data: lastRdo, error } = await supabase
+        .from('relatorios')
+        .select(`
+          *,
+          obras (nome, empresa, responsavel_tecnico, crea),
+          efetivos_obra (*),
+          servicos_executados (*)
+        `)
+        .order('data_relatorio', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (lastRdo && !error) {
+        setReport(prev => ({
+          ...prev,
+          obra: lastRdo.obras?.nome || prev.obra,
+          empresa: lastRdo.obras?.empresa || prev.empresa,
+          responsavel: lastRdo.obras?.responsavel_tecnico || prev.responsavel,
+          crea: lastRdo.obras?.crea || prev.crea,
+          efetivo: lastRdo.efetivos_obra?.map((e: any) => ({
+            id: generateId(),
+            role: e.funcao,
+            quantidade: e.quantidade
+          })) || prev.efetivo,
+          servicos: lastRdo.servicos_executados
+            ?.filter((s: any) => s.status !== 'CONCLUÍDO') // Remove os concluídos
+            .map((s: any) => ({
+              id: generateId(),
+              description: s.descricao,
+              local: s.local,
+              status: s.status === 'INICIADO' ? 'EM ANDAMENTO' : s.status
+            })) || prev.servicos,
+        }));
+      }
+    } catch (err) {
+      console.error("Nenhum RDO anterior ou erro ao buscar:", err);
+    } finally {
+      setIsLoaded(true);
+    }
+  };
 
   const fetchRDO = async (id: string) => {
     try {
@@ -430,12 +480,12 @@ function DailyReportApp() {
 
       const fileName = `${Date.now()}_${generateId()}.jpg`;
       const { error: uploadError } = await supabase.storage
-        .from('rdo-fotos')
+        .from('fotos')
         .upload(fileName, resizedBlob, { contentType: 'image/jpeg' });
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage.from('rdo-fotos').getPublicUrl(fileName);
+      const { data: { publicUrl } } = supabase.storage.from('fotos').getPublicUrl(fileName);
 
       setReport(prev => ({
         ...prev,
@@ -444,7 +494,7 @@ function DailyReportApp() {
 
     } catch (error) {
       console.error("Erro no upload da imagem", error);
-      alert('Erro ao enviar imagem. Verifique se o bucket "rdo-fotos" foi criado como Público.');
+      alert('Erro ao enviar imagem. Verifique se o bucket "fotos" foi criado como Público.');
     } finally {
       e.target.value = '';
     }
@@ -575,6 +625,13 @@ function DailyReportApp() {
         if (fotoError) throw fotoError;
       }
 
+      // Log event
+      await supabase.from('event_logs').insert({
+        user_id: user?.id,
+        acao: isEditing ? 'EDIT_RDO' : 'CREATE_RDO',
+        detalhes: { obra: report.obra, rdo_id: relatorioId }
+      });
+
       alert('Relatório salvo no Supabase com sucesso!');
       localStorage.removeItem('rdo_draft');
     } catch (error: any) {
@@ -600,18 +657,25 @@ function DailyReportApp() {
             </span>
           </div>
           <div className="flex gap-2">
-            <button onClick={saveTemplate} className="hidden lg:block px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-md text-[11px] font-bold uppercase tracking-widest transition-colors border border-slate-700 text-slate-300">
-              Salvar Modelo
+            <button onClick={() => router.push('/dashboard')} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-md text-[11px] font-bold uppercase tracking-widest transition-colors border border-slate-700 text-slate-300 mr-2 flex items-center gap-1">
+              <ArrowLeft size={14} /> Voltar
             </button>
-            <button onClick={loadTemplate} className="hidden lg:block px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-md text-[11px] font-bold uppercase tracking-widest transition-colors border border-slate-700 text-slate-300 mr-2">
-              Carregar Modelo
-            </button>
-            <button className="hidden sm:block px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-md text-[11px] font-bold uppercase tracking-widest transition-colors border border-slate-700">
-              Configurações
-            </button>
-            <button onClick={handleSaveToDatabase} disabled={isSaving || isEditing} className="hidden sm:block px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-md text-[11px] font-bold uppercase tracking-widest transition-colors text-white mr-2 disabled:opacity-50">
-              {isSaving ? 'Salvando...' : 'Salvar RDO'}
-            </button>
+            {role !== 'leitura' && (
+              <>
+                <button onClick={saveTemplate} className="hidden lg:block px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-md text-[11px] font-bold uppercase tracking-widest transition-colors border border-slate-700 text-slate-300">
+                  Salvar Modelo
+                </button>
+                <button onClick={loadTemplate} className="hidden lg:block px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-md text-[11px] font-bold uppercase tracking-widest transition-colors border border-slate-700 text-slate-300 mr-2">
+                  Carregar Modelo
+                </button>
+                <button className="hidden sm:block px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-md text-[11px] font-bold uppercase tracking-widest transition-colors border border-slate-700">
+                  Configurações
+                </button>
+                <button onClick={handleSaveToDatabase} disabled={isSaving || isEditing} className="hidden sm:block px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-md text-[11px] font-bold uppercase tracking-widest transition-colors text-white mr-2 disabled:opacity-50">
+                  {isSaving ? 'Salvando...' : 'Salvar RDO'}
+                </button>
+              </>
+            )}
             <button onClick={handlePrint} className="px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-md text-sm font-bold shadow-lg shadow-blue-900/20 transition-all text-white">
               GERAR PDF
             </button>
@@ -622,7 +686,7 @@ function DailyReportApp() {
 
           {/* ================= LEFT SIDE: FORM ================= */}
           <aside className={`w-full lg:w-[380px] xl:w-[420px] bg-slate-900/40 border-r border-slate-800 flex flex-col ${viewMode === 'form' ? 'flex' : 'hidden lg:flex'}`}>
-            <div className="flex-1 overflow-y-auto p-6 space-y-8 pb-32 lg:pb-8">
+            <fieldset disabled={role === 'leitura'} className="flex-1 overflow-y-auto p-6 space-y-8 pb-32 lg:pb-8">
 
               {/* 1. Dados Principais */}
               <div className="space-y-4">
@@ -815,7 +879,7 @@ function DailyReportApp() {
                 </div>
               </div>
 
-            </div>
+            </fieldset>
           </aside>
 
           {/* ================= RIGHT SIDE: A4 PREVIEW ================= */}

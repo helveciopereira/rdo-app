@@ -4,13 +4,15 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/src/lib/supabase';
 import ProtectedRoute from '@/src/components/ProtectedRoute';
 import { useAuth } from '@/src/contexts/AuthContext';
-import { Plus, FileText, Calendar, Building2, LogOut } from 'lucide-react';
+import { Plus, FileText, Calendar, Building2, LogOut, Trash2, History, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function DashboardPage() {
   const [relatorios, setRelatorios] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const { signOut, user } = useAuth();
+  const [showLogs, setShowLogs] = useState(false);
+  const [logs, setLogs] = useState<any[]>([]);
+  const { signOut, user, role } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -46,6 +48,42 @@ export default function DashboardPage() {
     return `${d}/${m}/${y}`;
   };
 
+  const handleDelete = async (id: string) => {
+    if (role !== 'master') return;
+    if (!confirm('Tem certeza que deseja apagar este RDO? Esta ação não pode ser desfeita.')) return;
+    try {
+      const { error } = await supabase.from('relatorios').delete().eq('id', id);
+      if (error) throw error;
+      
+      await supabase.from('event_logs').insert({
+        user_id: user?.id,
+        acao: 'DELETE_RDO',
+        detalhes: { rdo_id: id }
+      });
+      
+      setRelatorios(prev => prev.filter(r => r.id !== id));
+    } catch (error) {
+      console.error(error);
+      alert('Erro ao apagar RDO.');
+    }
+  };
+
+  const fetchLogs = async () => {
+    if (role !== 'master') return;
+    try {
+      const { data, error } = await supabase
+        .from('event_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      setLogs(data || []);
+      setShowLogs(true);
+    } catch(err) {
+      console.error(err);
+    }
+  };
+
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-slate-950 flex flex-col font-sans text-slate-200">
@@ -75,12 +113,24 @@ export default function DashboardPage() {
               <h1 className="text-2xl font-bold text-white">Histórico de RDOs</h1>
               <p className="text-sm text-slate-400 mt-1">Gerencie os relatórios diários das suas obras.</p>
             </div>
-            <button 
-              onClick={() => router.push('/rdo/novo')}
-              className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-md text-sm font-bold shadow-lg shadow-blue-900/20 flex items-center gap-2 uppercase tracking-widest transition-colors"
-            >
-              <Plus size={16} /> Novo RDO
-            </button>
+            <div className="flex gap-2">
+              {role === 'master' && (
+                <button 
+                  onClick={fetchLogs}
+                  className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-md text-sm font-bold shadow-lg flex items-center gap-2 uppercase tracking-widest transition-colors border border-slate-700"
+                >
+                  <History size={16} /> Logs
+                </button>
+              )}
+              {role !== 'leitura' && (
+                <button 
+                  onClick={() => router.push('/rdo/novo')}
+                  className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-md text-sm font-bold shadow-lg shadow-blue-900/20 flex items-center gap-2 uppercase tracking-widest transition-colors"
+                >
+                  <Plus size={16} /> Novo RDO
+                </button>
+              )}
+            </div>
           </div>
 
           {loading ? (
@@ -120,13 +170,59 @@ export default function DashboardPage() {
                     <button onClick={() => router.push(`/rdo/novo?id=${rdo.id}`)} className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 py-1.5 rounded text-[10px] font-bold uppercase tracking-widest transition-colors">
                       Visualizar
                     </button>
-                    {/* Futuramente, editar relatórios: router.push(`/rdo/editar/${rdo.id}`) */}
+                    {role === 'master' && (
+                      <button onClick={() => handleDelete(rdo.id)} className="bg-slate-800 hover:bg-red-900/50 hover:text-red-400 text-slate-400 py-1.5 px-3 rounded text-[10px] font-bold uppercase tracking-widest transition-colors border-l border-slate-700">
+                        <Trash2 size={14} />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
             </div>
           )}
         </main>
+
+        {/* Modal de Logs */}
+        {showLogs && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-slate-900 border border-slate-800 w-full max-w-3xl rounded-xl shadow-2xl flex flex-col max-h-[80vh]">
+              <div className="flex justify-between items-center p-6 border-b border-slate-800">
+                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                  <History size={18} className="text-blue-500" />
+                  Registro de Eventos (Auditoria)
+                </h2>
+                <button onClick={() => setShowLogs(false)} className="text-slate-500 hover:text-white transition-colors">
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="p-6 overflow-y-auto flex-1">
+                {logs.length === 0 ? (
+                  <p className="text-slate-500 text-center">Nenhum evento registrado.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {logs.map(log => (
+                      <div key={log.id} className="bg-slate-800/50 p-4 rounded-lg border border-slate-700/50 flex flex-col gap-2">
+                        <div className="flex justify-between items-start">
+                          <span className="font-bold text-blue-400 text-sm">{log.acao}</span>
+                          <span className="text-xs text-slate-500">
+                            {new Date(log.created_at).toLocaleString('pt-BR')}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-400 font-mono">
+                          User ID: {log.user_id}
+                        </p>
+                        <pre className="text-[10px] text-slate-500 mt-2 bg-slate-950 p-2 rounded overflow-x-auto">
+                          {JSON.stringify(log.detalhes, null, 2)}
+                        </pre>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </ProtectedRoute>
   );
