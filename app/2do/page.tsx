@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/src/lib/supabase';
 import ProtectedRoute from '@/src/components/ProtectedRoute';
 import { useAuth } from '@/src/contexts/AuthContext';
-import { ArrowLeft, CheckCircle, Circle, Clock, ListTodo, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Check, CheckCircle, Circle, GripVertical, ListTodo, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface Tarefa {
@@ -12,6 +12,7 @@ interface Tarefa {
   user_id: string;
   descricao: string;
   status: 'POR_FAZER' | 'ANDAMENTO' | 'CONCLUIDA' | 'EXCLUIDA';
+  ordem: number;
   created_at: string;
 }
 
@@ -19,6 +20,14 @@ export default function Do2Page() {
   const [tarefas, setTarefas] = useState<Tarefa[]>([]);
   const [novaTarefa, setNovaTarefa] = useState('');
   const [loading, setLoading] = useState(true);
+  
+  // Edit State
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState('');
+
+  // Drag State
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+
   const { user } = useAuth();
   const router = useRouter();
 
@@ -34,6 +43,7 @@ export default function Do2Page() {
         .select('*')
         .neq('status', 'CONCLUIDA')
         .neq('status', 'EXCLUIDA')
+        .order('ordem', { ascending: true })
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -49,13 +59,16 @@ export default function Do2Page() {
     e.preventDefault();
     if (!novaTarefa.trim() || !user) return;
 
+    const novaOrdem = tarefas.length > 0 ? Math.min(...tarefas.map(t => t.ordem || 0)) - 1 : 0;
+
     try {
       const { data, error } = await supabase
         .from('tarefas')
         .insert({
           user_id: user.id,
           descricao: novaTarefa.trim(),
-          status: 'POR_FAZER'
+          status: 'POR_FAZER',
+          ordem: novaOrdem
         })
         .select()
         .single();
@@ -90,6 +103,77 @@ export default function Do2Page() {
       setTarefas(prev => prev.filter(t => t.id !== id));
     } catch (error) {
       console.error('Erro ao excluir tarefa:', error);
+    }
+  };
+
+  // Funções de Edição
+  const startEditing = (tarefa: Tarefa) => {
+    setEditingId(tarefa.id);
+    setEditingText(tarefa.descricao);
+  };
+
+  const saveEdit = async (id: string) => {
+    if (!editingText.trim()) return;
+    try {
+      const { error } = await supabase
+        .from('tarefas')
+        .update({ descricao: editingText.trim() })
+        .eq('id', id);
+
+      if (error) throw error;
+      setTarefas(prev => prev.map(t => t.id === id ? { ...t, descricao: editingText.trim() } : t));
+    } catch (error) {
+      console.error('Erro ao editar tarefa:', error);
+    } finally {
+      setEditingId(null);
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditingText('');
+  };
+
+  // Funções de Drag and Drop
+  const handleDragStart = (e: React.DragEvent, id: string) => {
+    setDraggedId(id);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', id); // Necessário para Firefox
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault(); // Necessário para permitir o drop
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    if (!draggedId || draggedId === targetId) return;
+
+    const oldIndex = tarefas.findIndex(t => t.id === draggedId);
+    const newIndex = tarefas.findIndex(t => t.id === targetId);
+
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const novasTarefas = [...tarefas];
+    const [draggedItem] = novasTarefas.splice(oldIndex, 1);
+    novasTarefas.splice(newIndex, 0, draggedItem);
+    
+    // Atualiza otimisticamente a ordem local
+    setTarefas(novasTarefas);
+    setDraggedId(null);
+
+    // Salva a nova ordem no banco
+    try {
+      await Promise.all(
+        novasTarefas.map((t, index) => 
+          supabase.from('tarefas').update({ ordem: index }).eq('id', t.id)
+        )
+      );
+      // Opcionalmente recarregar os dados para ter as ordens exatas do DB:
+      // fetchTarefas();
+    } catch (error) {
+      console.error('Erro ao salvar reordenação:', error);
     }
   };
 
@@ -165,42 +249,84 @@ export default function Do2Page() {
               ) : (
                 <ul className="space-y-2">
                   {tarefas.map(tarefa => (
-                    <li key={tarefa.id} className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${tarefa.status === 'CONCLUIDA' ? 'bg-slate-900/50 border-slate-800/50 opacity-60' : 'bg-slate-800/80 border-slate-700 hover:border-slate-600'}`}>
-                      
+                    <li 
+                      key={tarefa.id} 
+                      draggable={editingId !== tarefa.id}
+                      onDragStart={(e) => handleDragStart(e, tarefa.id)}
+                      onDragOver={handleDragOver}
+                      onDrop={(e) => handleDrop(e, tarefa.id)}
+                      className={`flex items-center gap-3 p-3 rounded-lg border transition-all 
+                        ${draggedId === tarefa.id ? 'opacity-40 border-emerald-500 scale-[0.99]' : 'opacity-100 scale-100'}
+                        ${tarefa.status === 'CONCLUIDA' ? 'bg-slate-900/50 border-slate-800/50' : 'bg-slate-800/80 border-slate-700 hover:border-slate-600'}
+                      `}
+                    >
+                      <div className="cursor-grab active:cursor-grabbing text-slate-600 hover:text-emerald-500 transition-colors p-1" title="Arraste para reordenar">
+                        <GripVertical size={18} />
+                      </div>
+
                       <button 
                         onClick={() => updateStatus(tarefa.id, tarefa.status === 'CONCLUIDA' ? 'POR_FAZER' : 'CONCLUIDA')}
-                        className={`mt-0.5 shrink-0 ${tarefa.status === 'CONCLUIDA' ? 'text-emerald-500' : 'text-slate-500 hover:text-emerald-400'}`}
+                        className={`mt-0.5 shrink-0 transition-colors ${tarefa.status === 'CONCLUIDA' ? 'text-emerald-500' : 'text-slate-500 hover:text-emerald-400'}`}
                       >
                         {tarefa.status === 'CONCLUIDA' ? <CheckCircle size={20} /> : <Circle size={20} />}
                       </button>
 
-                      <span className={`flex-1 text-sm ${tarefa.status === 'CONCLUIDA' ? 'line-through text-slate-500' : 'text-slate-200'}`}>
-                        {tarefa.descricao}
-                      </span>
-
-                      <div className="flex items-center gap-2 shrink-0">
-                        <select 
-                          value={tarefa.status}
-                          onChange={(e) => updateStatus(tarefa.id, e.target.value as any)}
-                          className={`bg-slate-900 border border-slate-700 rounded px-2 py-1 text-[10px] font-bold uppercase tracking-widest outline-none appearance-none cursor-pointer
-                            ${tarefa.status === 'POR_FAZER' ? 'text-slate-400' : ''}
-                            ${tarefa.status === 'ANDAMENTO' ? 'text-blue-400 border-blue-900' : ''}
-                            ${tarefa.status === 'CONCLUIDA' ? 'text-emerald-500 border-emerald-900/50' : ''}
-                          `}
+                      {editingId === tarefa.id ? (
+                        <div className="flex-1 flex items-center gap-2">
+                          <input 
+                            autoFocus
+                            type="text" 
+                            value={editingText}
+                            onChange={e => setEditingText(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && saveEdit(tarefa.id)}
+                            onBlur={() => saveEdit(tarefa.id)}
+                            className="flex-1 bg-slate-950 border border-emerald-500 rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 shadow-inner"
+                          />
+                          <button onClick={cancelEdit} onMouseDown={e => e.preventDefault()} className="text-slate-500 hover:text-red-400 p-1 bg-slate-800 rounded transition-colors"><X size={14}/></button>
+                        </div>
+                      ) : (
+                        <span 
+                          onDoubleClick={() => startEditing(tarefa)}
+                          className={`flex-1 text-sm cursor-text hover:text-emerald-100 transition-colors ${tarefa.status === 'CONCLUIDA' ? 'line-through text-slate-500 hover:text-slate-400' : 'text-slate-200'}`}
                         >
-                          <option value="POR_FAZER">Por Fazer</option>
-                          <option value="ANDAMENTO">Andamento</option>
-                          <option value="CONCLUIDA">Concluída</option>
-                          <option value="EXCLUIDA">Excluída</option>
-                        </select>
+                          {tarefa.descricao}
+                        </span>
+                      )}
 
-                        <button 
-                          onClick={() => handleDelete(tarefa.id)}
-                          className="text-slate-600 hover:text-red-400 p-1"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
+                      {editingId !== tarefa.id && (
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button 
+                            onClick={() => startEditing(tarefa)}
+                            className="text-slate-600 hover:text-emerald-400 p-1 transition-colors"
+                            title="Editar"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          
+                          <select 
+                            value={tarefa.status}
+                            onChange={(e) => updateStatus(tarefa.id, e.target.value as any)}
+                            className={`bg-slate-900 border border-slate-700 rounded px-2 py-1 text-[10px] font-bold uppercase tracking-widest outline-none appearance-none cursor-pointer transition-colors
+                              ${tarefa.status === 'POR_FAZER' ? 'text-slate-400' : ''}
+                              ${tarefa.status === 'ANDAMENTO' ? 'text-blue-400 border-blue-900' : ''}
+                              ${tarefa.status === 'CONCLUIDA' ? 'text-emerald-500 border-emerald-900/50' : ''}
+                            `}
+                          >
+                            <option value="POR_FAZER">Por Fazer</option>
+                            <option value="ANDAMENTO">Andamento</option>
+                            <option value="CONCLUIDA">Concluída</option>
+                            <option value="EXCLUIDA">Excluída</option>
+                          </select>
+
+                          <button 
+                            onClick={() => handleDelete(tarefa.id)}
+                            className="text-slate-600 hover:text-red-400 p-1 transition-colors"
+                            title="Excluir"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      )}
                     </li>
                   ))}
                 </ul>
