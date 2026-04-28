@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/src/lib/supabase';
 import ProtectedRoute from '@/src/components/ProtectedRoute';
 import { useAuth } from '@/src/contexts/AuthContext';
-import { Plus, FileText, Calendar, Building2, LogOut, Trash2, History, X } from 'lucide-react';
+import { Plus, FileText, Calendar, Building2, LogOut, Trash2, History, X, ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function DashboardPage() {
@@ -99,10 +99,10 @@ export default function DashboardPage() {
           <div className="flex items-center gap-4">
             <span className="text-xs text-slate-400 hidden sm:block">{user?.email}</span>
             <button 
-              onClick={signOut}
-              className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 hover:bg-red-900/50 hover:text-red-400 rounded text-xs font-bold uppercase tracking-widest transition-colors border border-slate-700 hover:border-red-900"
+              onClick={() => router.push('/hub')}
+              className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-xs font-bold uppercase tracking-widest transition-colors border border-slate-700"
             >
-              <LogOut size={14} /> Sair
+              <ArrowLeft size={14} /> Voltar
             </button>
           </div>
         </nav>

@@ -71,6 +71,7 @@ interface Workforce {
 
 interface Service {
   id: string;
+  categoria?: string;
   description: string;
   local: string;
   status: 'INICIADO' | 'EM ANDAMENTO' | 'CONCLUÍDO';
@@ -193,9 +194,10 @@ const A4Page = ({ data, showMain, fotos, pageNum, totalPages }: { data: ReportSt
                 <thead>
                   <tr className="border-b-2 border-slate-300 text-[9px] uppercase text-slate-500">
                     <th className="pb-1 w-8 text-center font-bold">#</th>
-                    <th className="pb-1 font-bold">Descrição do Serviço</th>
-                    <th className="pb-1 w-1/4 font-bold">Local</th>
-                    <th className="pb-1 w-24 text-center font-bold">Status</th>
+                    <th className="pb-1 w-1/3 font-bold">Descrição do Serviço</th>
+                    <th className="pb-1 w-1/4 font-bold">Categoria</th>
+                    <th className="pb-1 w-1/5 font-bold">Local</th>
+                    <th className="pb-1 w-20 text-center font-bold">Status</th>
                   </tr>
                 </thead>
                 <tbody className="text-[10px]">
@@ -208,6 +210,7 @@ const A4Page = ({ data, showMain, fotos, pageNum, totalPages }: { data: ReportSt
                     <tr key={srv.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
                       <td className="py-1.5 font-mono text-center text-slate-400">{String(idx + 1).padStart(2, '0')}</td>
                       <td className="py-1.5 font-medium">{srv.description}</td>
+                      <td className="py-1.5 text-slate-600 text-[9px]">{srv.categoria || '—'}</td>
                       <td className="py-1.5 text-slate-600">{srv.local}</td>
                       <td className="py-1.5 text-center">
                         <span className={`text-[9px] font-bold tracking-wider uppercase ${STATUS_COLORS[srv.status]}`}>
@@ -434,7 +437,7 @@ function DailyReportApp() {
           climaManha: relatorio.clima_manha,
           climaTarde: relatorio.clima_tarde,
           efetivo: relatorio.efetivos_obra.map((e: any) => ({ id: e.id, role: e.funcao, quantidade: e.quantidade })),
-          servicos: relatorio.servicos_executados.map((s: any) => ({ id: s.id, description: s.descricao, local: s.local, status: s.status })),
+          servicos: relatorio.servicos_executados.map((s: any) => ({ id: s.id, categoria: s.categoria || '', description: s.descricao, local: s.local, status: s.status })),
           ocorrencias: relatorio.ocorrencias_observacoes || '',
           fotos: relatorio.registros_fotograficos.map((f: any) => ({ id: f.id, url: f.imagem_url, caption: f.legenda }))
         });
@@ -463,7 +466,7 @@ function DailyReportApp() {
   const updateEfetivo = (id: string, field: keyof Workforce, value: any) => setReport(prev => ({ ...prev, efetivo: prev.efetivo.map(e => e.id === id ? { ...e, [field]: value } : e) }));
   const removeEfetivo = (id: string) => setReport(prev => ({ ...prev, efetivo: prev.efetivo.filter(e => e.id !== id) }));
 
-  const addServico = () => setReport(prev => ({ ...prev, servicos: [...prev.servicos, { id: generateId(), description: '', local: '', status: 'INICIADO' }] }));
+  const addServico = () => setReport(prev => ({ ...prev, servicos: [...prev.servicos, { id: generateId(), categoria: '', description: '', local: '', status: 'INICIADO' }] }));
   const updateServico = (id: string, field: keyof Service, value: any) => setReport(prev => ({ ...prev, servicos: prev.servicos.map(s => s.id === id ? { ...s, [field]: value } : s) }));
   const removeServico = (id: string) => setReport(prev => ({ ...prev, servicos: prev.servicos.filter(s => s.id !== id) }));
 
@@ -606,6 +609,7 @@ function DailyReportApp() {
       if (report.servicos.length > 0) {
         const servicosToInsert = report.servicos.map(srv => ({
           relatorio_id: relatorioId,
+          categoria: srv.categoria || null,
           descricao: srv.description,
           local: srv.local,
           status: srv.status
@@ -817,13 +821,67 @@ function DailyReportApp() {
               {/* 4. Serviços */}
               <div className="space-y-4">
                 <h2 className="text-xs font-bold uppercase tracking-widest text-blue-400">Serviços</h2>
+                <datalist id="categorias-list">
+                  <option value="ADMINISTRAÇÃO LOCAL" />
+                  <option value="ARRANQUE DE PILARES" />
+                  <option value="BLOCOS DE COROAMENTO" />
+                  <option value="COBERTURA" />
+                  <option value="CONSTRUÇÃO - RESERVATÓRIO ELEVADO" />
+                  <option value="DEMOLIÇÕES E RETIRADAS" />
+                  <option value="DRENAGEM DE ÁGUAS PLUVIAIS" />
+                  <option value="ESQUADRIAS" />
+                  <option value="ESTACAS PRÉ-MOLDADAS" />
+                  <option value="ESTRUTURA" />
+                  <option value="ESTRUTURA METÁLICA PARA COBERTURA ALTA" />
+                  <option value="ESTRUTURA METÁLICA PARA COBERTURA BAIXA" />
+                  <option value="ETE" />
+                  <option value="FUNDAÇÃO" />
+                  <option value="IMPERMEABILIZAÇÕES" />
+                  <option value="INFRAESTRUTURA" />
+                  <option value="INSTALAÇÕES DE AR CONDICIONADO" />
+                  <option value="INSTALAÇÕES DE CABEAMENTO ESTRUTURADO" />
+                  <option value="INSTALAÇÕES DE COMBATE A INCÊNDIO E PÂNICO" />
+                  <option value="INSTALAÇÕES DE SPDA" />
+                  <option value="INSTALAÇÕES ELÉTRICAS" />
+                  <option value="INSTALAÇÕES HIDRÁULICAS" />
+                  <option value="INSTALAÇÕES SANITÁRIAS" />
+                  <option value="LOUÇAS, BANCADAS E METAIS" />
+                  <option value="MOVIMENTAÇÃO DE TERRA" />
+                  <option value="PAREDES E PAINÉIS" />
+                  <option value="PAVIMENTAÇÃO" />
+                  <option value="PILARES" />
+                  <option value="PILARES DE APOIO DA COBERTURA BAIXA" />
+                  <option value="PINTURA" />
+                  <option value="PINTURA DE PAREDES" />
+                  <option value="PINTURA EM METAIS" />
+                  <option value="PINTURA EM PAREDES EXTERNAS" />
+                  <option value="PINTURA EM PISO" />
+                  <option value="PINTURA EM TETOS" />
+                  <option value="RECONSTRUÇÃO DA LAJE (PISO) DO SALÃO" />
+                  <option value="RECUPERAÇÃO DE PILARES INTERNOS E REFORÇO ESTRUTURAL APOIO DA COBERTURA ALTA" />
+                  <option value="REDE DE ESGOTO" />
+                  <option value="RESERVATÓRIO" />
+                  <option value="REVESTIMENTOS" />
+                  <option value="REVESTIMENTO DE PAREDES EXTERNAS" />
+                  <option value="REVESTIMENTO DE TETOS" />
+                  <option value="SERVIÇOS PRELIMINARES" />
+                  <option value="SERVIÇOS COMPLEMENTARES" />
+                  <option value="SERVIÇOS INICIAIS" />
+                  <option value="SERVIÇOS FINAIS" />
+                  <option value="SUPERESTRUTURA" />
+                  <option value="TELHAMENTO COBERTURA ALTA" />
+                  <option value="TELHAMENTO COBERTURA BAIXA" />
+                  <option value="VIGAS" />
+                  <option value="VIGAS BALDRAMES" />
+                </datalist>
                 <datalist id="locais-list">
-                  <option value="Salão principal" />
-                  <option value="Banheiro PCD" />
-                  <option value="Caixa d'água" />
-                  <option value="Externo" />
-                  <option value="Diretoria" />
-                  <option value="Corredores" />
+                  <option value="ÁREAS MOLHADAS" />
+                  <option value="CAIXA D'ÁGUA" />
+                  <option value="COBERTURA" />
+                  <option value="REGIÕES EXTERNAS" />
+                  <option value="REGIÕES INTERNAS" />
+                  <option value="REGIÕES INTERNAS E EXTERNAS" />
+                  <option value="SALÃO PRINCIPAL" />
                 </datalist>
                 <div className="space-y-3">
                   {report.servicos.map((srv) => (
@@ -835,8 +893,12 @@ function DailyReportApp() {
                       />
                       <div className="flex gap-2">
                         <input
+                          type="text" list="categorias-list" value={srv.categoria || ''} onChange={e => updateServico(srv.id, 'categoria', e.target.value)}
+                          className="flex-1 bg-slate-800 border border-slate-700 rounded py-1px px-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none uppercase" placeholder="Categoria"
+                        />
+                        <input
                           type="text" list="locais-list" value={srv.local} onChange={e => updateServico(srv.id, 'local', e.target.value)}
-                          className="flex-1 bg-slate-800 border border-slate-700 rounded py-1px px-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none" placeholder="Local"
+                          className="flex-1 bg-slate-800 border border-slate-700 rounded py-1px px-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none uppercase" placeholder="Local"
                         />
                         <select
                           value={srv.status} onChange={e => updateServico(srv.id, 'status', e.target.value)}

@@ -14,29 +14,29 @@ export default function LoginPage() {
   const router = useRouter();
   const { session } = useAuth();
 
-  useEffect(() => {
-    if (session) {
-      router.push('/dashboard');
-    }
-  }, [session, router]);
+    useEffect(() => {
+      if (session) {
+        router.push('/hub');
+      }
+    }, [session, router]);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
+    const handleLogin = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setLoading(true);
+      setError('');
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (error) {
-      setError(error.message);
-      setLoading(false);
-    } else {
-      router.push('/dashboard');
-    }
-  };
+      if (error) {
+        setError(error.message);
+        setLoading(false);
+      } else {
+        router.push('/hub');
+      }
+    };
 
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4">
