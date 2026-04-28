@@ -134,6 +134,13 @@ const formatDate = (dateStr: string) => {
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
 
+const getBasePath = () => {
+  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/rdo-app')) {
+    return '/rdo-app';
+  }
+  return '';
+};
+
 /* ================= A4 PAGE COMPONENT ================= */
 
 const A4Page = ({ data, showMain, fotos, pageNum, totalPages }: { data: ReportState, showMain: boolean, fotos: PhotoRecord[], pageNum: number, totalPages: number }) => {
@@ -154,7 +161,7 @@ const A4Page = ({ data, showMain, fotos, pageNum, totalPages }: { data: ReportSt
       <header className="border-b-2 border-slate-900 pb-4 mb-6 flex items-start justify-between mt-4 shrink-0">
         <div className="flex gap-4 items-center">
           {data.logoUrl ? (
-            <img src={data.logoUrl} alt="Logo" className="w-16 h-16 object-contain" />
+            <img src={data.logoUrl.startsWith('/') ? `${getBasePath()}${data.logoUrl}` : data.logoUrl} alt="Logo" className="w-16 h-16 object-contain" />
           ) : (
             <div className="w-14 h-14 bg-slate-200 border-2 border-slate-300 flex items-center justify-center text-[10px] font-bold text-slate-400">LOGO</div>
           )}
@@ -164,7 +171,7 @@ const A4Page = ({ data, showMain, fotos, pageNum, totalPages }: { data: ReportSt
           </div>
         </div>
         <div className="text-right flex flex-col items-end">
-          <div className="text-[10px] font-bold bg-slate-100 px-3 py-1 mb-2 border border-slate-200 tracking-widest text-slate-700">v1.21</div>
+          <div className="text-[10px] font-bold bg-slate-100 px-3 py-1 mb-2 border border-slate-200 tracking-widest text-slate-700">v1.22</div>
           <p className="text-[10px] uppercase font-bold text-slate-800">Data: {formatDate(data.data)}</p>
           <p className="text-[9px] text-slate-500 mt-1 uppercase font-semibold">Clima: M: {getCondText(data.climaManha)} / T: {getCondText(data.climaTarde)}</p>
         </div>
