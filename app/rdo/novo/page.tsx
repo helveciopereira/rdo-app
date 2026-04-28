@@ -891,14 +891,14 @@ function DailyReportApp() {
                         type="text" value={srv.description} onChange={e => updateServico(srv.id, 'description', e.target.value)}
                         className="bg-slate-800 border border-slate-700 rounded py-1.5 px-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none w-[90%]" placeholder="Descrição"
                       />
+                      <input
+                        type="text" list="categorias-list" value={srv.categoria || ''} onChange={e => updateServico(srv.id, 'categoria', e.target.value)}
+                        className="w-full bg-slate-800 border border-slate-700 rounded py-1.5 px-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none uppercase" placeholder="Categoria"
+                      />
                       <div className="flex gap-2">
                         <input
-                          type="text" list="categorias-list" value={srv.categoria || ''} onChange={e => updateServico(srv.id, 'categoria', e.target.value)}
-                          className="flex-1 bg-slate-800 border border-slate-700 rounded py-1px px-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none uppercase" placeholder="Categoria"
-                        />
-                        <input
                           type="text" list="locais-list" value={srv.local} onChange={e => updateServico(srv.id, 'local', e.target.value)}
-                          className="flex-1 bg-slate-800 border border-slate-700 rounded py-1px px-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none uppercase" placeholder="Local"
+                          className="flex-1 bg-slate-800 border border-slate-700 rounded py-1.5 px-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none uppercase" placeholder="Local"
                         />
                         <select
                           value={srv.status} onChange={e => updateServico(srv.id, 'status', e.target.value)}
