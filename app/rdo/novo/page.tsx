@@ -23,6 +23,8 @@ import ProtectedRoute from '@/src/components/ProtectedRoute';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { useSearchParams, useRouter } from 'next/navigation';
 
+const generateId = () => crypto.randomUUID();
+
 const resizeImageClientSide = (file: File, maxWidth: number, maxHeight: number): Promise<Blob> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
