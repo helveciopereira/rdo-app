@@ -25,12 +25,13 @@ export default function DashboardPage() {
     setLoading(true);
     setErrorState(null);
     
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Timeout de conexão')), 15000)
-    );
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+    }, 15000);
 
     try {
-      const fetchPromise = supabase
+      const { data, error } = await supabase
         .from('relatorios')
         .select(`
           id,
@@ -40,16 +41,20 @@ export default function DashboardPage() {
             empresa
           )
         `)
-        .order('data_relatorio', { ascending: false });
-
-      const result = await Promise.race([fetchPromise, timeoutPromise]) as any;
+        .order('data_relatorio', { ascending: false })
+        .abortSignal(controller.signal);
       
-      if (result.error) throw result.error;
-      setRelatorios(result.data || []);
+      if (error) throw error;
+      setRelatorios(data || []);
     } catch (error: any) {
       console.error('Erro ao buscar relatórios:', error);
-      setErrorState(error.message === 'Timeout de conexão' ? 'A conexão demorou muito para responder. Tente novamente.' : 'Falha ao comunicar com o servidor.');
+      if (error.name === 'AbortError' || error.message?.includes('aborted') || error.message === 'Timeout de conexão') {
+        setErrorState('A conexão demorou muito para responder. Tente novamente.');
+      } else {
+        setErrorState('Falha ao comunicar com o servidor.');
+      }
     } finally {
+      clearTimeout(timeoutId);
       setLoading(false);
     }
   };
@@ -202,7 +207,7 @@ export default function DashboardPage() {
               <h3 className="text-lg font-bold text-red-400 mb-2">Ops, algo deu errado.</h3>
               <p className="text-sm text-slate-400 mb-6">{errorState}</p>
               <button 
-                onClick={fetchRelatorios}
+                onClick={() => window.location.reload()}
                 className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-6 py-2 rounded-md text-sm font-bold border border-slate-700 uppercase tracking-widest transition-colors"
               >
                 Tentar Novamente
