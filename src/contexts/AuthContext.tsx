@@ -30,15 +30,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     // Busca a sessão inicial
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session }, error }) => {
+      if (error) {
+        console.error('Erro de sessão Supabase:', error);
+      }
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        const { data } = await supabase.from('user_roles').select('role').eq('user_id', session.user.id).single();
-        setRole(data?.role || 'leitura');
+        try {
+          const { data } = await supabase.from('user_roles').select('role').eq('user_id', session.user.id).single();
+          setRole(data?.role || 'leitura');
+        } catch (err) {
+          console.error('Erro ao buscar role:', err);
+          setRole('leitura');
+        }
       } else {
         setRole('leitura');
       }
+      setLoading(false);
+    }).catch(err => {
+      console.error('Falha crítica ao buscar sessão:', err);
       setLoading(false);
     });
 
@@ -47,8 +58,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        const { data } = await supabase.from('user_roles').select('role').eq('user_id', session.user.id).single();
-        setRole(data?.role || 'leitura');
+        try {
+          const { data } = await supabase.from('user_roles').select('role').eq('user_id', session.user.id).single();
+          setRole(data?.role || 'leitura');
+        } catch(err) {
+          console.error('Erro onAuthStateChange:', err);
+          setRole('leitura');
+        }
       } else {
         setRole('leitura');
       }

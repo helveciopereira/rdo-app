@@ -13,6 +13,7 @@ export default function DashboardPage() {
   const [showLogs, setShowLogs] = useState(false);
   const [logs, setLogs] = useState<any[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [errorState, setErrorState] = useState<string | null>(null);
   const { signOut, user, role } = useAuth();
   const router = useRouter();
 
@@ -21,8 +22,15 @@ export default function DashboardPage() {
   }, []);
 
   const fetchRelatorios = async () => {
+    setLoading(true);
+    setErrorState(null);
+    
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Timeout de conexão')), 15000)
+    );
+
     try {
-      const { data, error } = await supabase
+      const fetchPromise = supabase
         .from('relatorios')
         .select(`
           id,
@@ -34,10 +42,13 @@ export default function DashboardPage() {
         `)
         .order('data_relatorio', { ascending: false });
 
-      if (error) throw error;
-      setRelatorios(data || []);
-    } catch (error) {
+      const result = await Promise.race([fetchPromise, timeoutPromise]) as any;
+      
+      if (result.error) throw result.error;
+      setRelatorios(result.data || []);
+    } catch (error: any) {
       console.error('Erro ao buscar relatórios:', error);
+      setErrorState(error.message === 'Timeout de conexão' ? 'A conexão demorou muito para responder. Tente novamente.' : 'Falha ao comunicar com o servidor.');
     } finally {
       setLoading(false);
     }
@@ -185,6 +196,17 @@ export default function DashboardPage() {
               {[1, 2, 3].map(i => (
                 <div key={i} className="h-20 bg-slate-800/50 rounded-lg border border-slate-800"></div>
               ))}
+            </div>
+          ) : errorState ? (
+            <div className="bg-red-900/10 border border-red-900/30 rounded-lg p-12 flex flex-col items-center justify-center text-center">
+              <h3 className="text-lg font-bold text-red-400 mb-2">Ops, algo deu errado.</h3>
+              <p className="text-sm text-slate-400 mb-6">{errorState}</p>
+              <button 
+                onClick={fetchRelatorios}
+                className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-6 py-2 rounded-md text-sm font-bold border border-slate-700 uppercase tracking-widest transition-colors"
+              >
+                Tentar Novamente
+              </button>
             </div>
           ) : relatorios.length === 0 ? (
             <div className="bg-slate-900/50 border border-slate-800 rounded-lg p-12 flex flex-col items-center justify-center text-center">
