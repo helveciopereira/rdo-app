@@ -86,6 +86,9 @@ function DailyReportApp() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [errorState, setErrorState] = useState<string | null>(null);
 
+  // IDs das fotos que já existiam no banco (para não inserir duplicatas ao salvar)
+  const [originalPhotoIds, setOriginalPhotoIds] = useState<Set<string>>(new Set());
+
   useEffect(() => {
     if (isEditing) {
       fetchRDO(rdoId);
@@ -195,6 +198,10 @@ function DailyReportApp() {
           ocorrencias: relatorio.ocorrencias_observacoes || '',
           fotos: relatorio.registros_fotograficos.map((f: any) => ({ id: f.id, url: f.imagem_url, caption: f.legenda }))
         });
+
+        // Salva os IDs das fotos originais para não duplicar ao salvar novas
+        const idsOriginais = new Set<string>(relatorio.registros_fotograficos.map((f: any) => f.id as string));
+        setOriginalPhotoIds(idsOriginais);
       }
     } catch (err: any) {
       console.error("Erro ao buscar RDO:", err);
@@ -412,6 +419,66 @@ function DailyReportApp() {
     }
   };
 
+  /**
+   * Salva APENAS as fotos novas (que foram adicionadas após o RDO já ter sido salvo).
+   * Não altera nenhum outro dado do relatório — apenas INSERT de registros fotográficos.
+   */
+  const handleSavePhotosToExistingRDO = async () => {
+    if (!rdoId) return;
+
+    // Filtra apenas as fotos que NÃO estão no banco original
+    const novasFotos = report.fotos.filter(f => !originalPhotoIds.has(f.id));
+
+    if (novasFotos.length === 0) {
+      alert('Nenhuma foto nova para salvar.');
+      return;
+    }
+
+    // Verifica se alguma foto ainda está sendo enviada
+    const fotasPendentes = novasFotos.filter(f => f.caption === 'Enviando...');
+    if (fotasPendentes.length > 0) {
+      alert('Aguarde o upload das fotos terminar antes de salvar.');
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+
+      const fotosToInsert = novasFotos.map(foto => ({
+        relatorio_id: rdoId,
+        imagem_url: foto.url,
+        legenda: foto.caption
+      }));
+
+      const { error: fotoError } = await supabase
+        .from('registros_fotograficos')
+        .insert(fotosToInsert);
+
+      if (fotoError) throw fotoError;
+
+      // Registra evento de auditoria
+      await supabase.from('event_logs').insert({
+        user_id: user?.id,
+        acao: 'ADD_PHOTOS_RDO',
+        detalhes: { rdo_id: rdoId, quantidade: novasFotos.length }
+      });
+
+      // Atualiza os IDs originais para incluir as fotos recém-salvas
+      setOriginalPhotoIds(prev => {
+        const novos = new Set(prev);
+        novasFotos.forEach(f => novos.add(f.id));
+        return novos;
+      });
+
+      alert(`${novasFotos.length} foto(s) salva(s) com sucesso!`);
+    } catch (error: any) {
+      console.error('Erro ao salvar fotos:', error);
+      alert('Erro ao salvar fotos: ' + error.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <ProtectedRoute>
       <div className="no-print h-screen flex flex-col overflow-hidden bg-slate-950 font-sans text-slate-200">
@@ -466,9 +533,15 @@ function DailyReportApp() {
                 <button onClick={loadTemplate} className="hidden lg:block px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-md text-[11px] font-bold uppercase tracking-widest transition-colors border border-slate-700 text-slate-300 mr-2">
                   Carregar Modelo
                 </button>
-                <button onClick={handleSaveToDatabase} disabled={isSaving || isEditing} className="hidden lg:block px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-md text-[11px] font-bold uppercase tracking-widest transition-colors text-white mr-2 disabled:opacity-50">
-                  {isSaving ? 'Salvando...' : 'Salvar RDO'}
-                </button>
+                {isEditing ? (
+                  <button onClick={handleSavePhotosToExistingRDO} disabled={isSaving} className="hidden lg:block px-4 py-2 bg-amber-600 hover:bg-amber-500 rounded-md text-[11px] font-bold uppercase tracking-widest transition-colors text-white mr-2 disabled:opacity-50">
+                    {isSaving ? 'Salvando...' : '📷 Salvar Fotos'}
+                  </button>
+                ) : (
+                  <button onClick={handleSaveToDatabase} disabled={isSaving} className="hidden lg:block px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-md text-[11px] font-bold uppercase tracking-widest transition-colors text-white mr-2 disabled:opacity-50">
+                    {isSaving ? 'Salvando...' : 'Salvar RDO'}
+                  </button>
+                )}
               </>
             )}
             <button onClick={handlePrint} className="hidden lg:block px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-md text-sm font-bold shadow-lg shadow-blue-900/20 transition-all text-white">
@@ -481,7 +554,7 @@ function DailyReportApp() {
 
           {/* ================= LEFT SIDE: FORM ================= */}
           <aside className={`w-full lg:w-[380px] xl:w-[420px] bg-slate-900/40 border-r border-slate-800 flex flex-col ${viewMode === 'form' ? 'flex' : 'hidden lg:flex'}`}>
-            <fieldset disabled={role === 'leitura'} className="flex-1 overflow-y-auto p-6 space-y-8 pb-32 lg:pb-8">
+            <fieldset disabled={role === 'leitura' || isEditing} className="flex-1 overflow-y-auto p-6 space-y-8 pb-32 lg:pb-8">
 
               {/* 1. Dados Principais */}
               <div className="space-y-4">
@@ -710,20 +783,46 @@ function DailyReportApp() {
                 />
               </div>
 
-              {/* 6. Fotos */}
-              <div className="space-y-4">
+              {/* 6. Fotos — FORA do fieldset disabled para permitir adição em RDOs já salvos */}
+              </fieldset>
+              <div className="px-6 pb-32 lg:pb-8 space-y-4">
                 <h2 className="text-xs font-bold uppercase tracking-widest text-blue-400">Fotos</h2>
+
+                {/* Banner informativo quando editando RDO existente */}
+                {isEditing && (
+                  <div className="bg-amber-900/20 border border-amber-700/50 rounded-lg p-3 flex items-start gap-2">
+                    <Camera size={16} className="text-amber-400 mt-0.5 shrink-0" />
+                    <p className="text-[11px] text-amber-300/80 leading-relaxed">
+                      Modo de edição: apenas <strong>fotos e legendas</strong> podem ser adicionadas. Os dados do relatório estão protegidos.
+                    </p>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-2">
-                  {report.fotos.map(foto => (
-                    <div key={foto.id} className="relative group">
-                      <img src={foto.url} alt="Envio" className="w-full aspect-video object-cover rounded border border-slate-700 opacity-80 group-hover:opacity-100 transition-opacity" />
-                      <button onClick={() => removeFoto(foto.id)} className="absolute top-1 right-1 bg-red-600 w-5 h-5 rounded flex items-center justify-center text-white p-0.5"><X size={12} /></button>
-                      <input
-                        type="text" value={foto.caption} onChange={e => updateFotoCaption(foto.id, e.target.value)} placeholder="Legenda..."
-                        className="absolute bottom-0 w-full bg-slate-900/90 text-[10px] px-2 py-1 outline-none placeholder:text-slate-500"
-                      />
-                    </div>
-                  ))}
+                  {report.fotos.map(foto => {
+                    const isOriginal = originalPhotoIds.has(foto.id);
+                    return (
+                      <div key={foto.id} className="relative group">
+                        <img src={foto.url} alt="Envio" className="w-full aspect-video object-cover rounded border border-slate-700 opacity-80 group-hover:opacity-100 transition-opacity" />
+
+                        {/* Botão de remover: só aparece se a foto NÃO é original do banco */}
+                        {!isOriginal && (
+                          <button onClick={() => removeFoto(foto.id)} className="absolute top-1 right-1 bg-red-600 w-5 h-5 rounded flex items-center justify-center text-white p-0.5"><X size={12} /></button>
+                        )}
+
+                        {/* Indicador visual de foto já salva no banco */}
+                        {isOriginal && isEditing && (
+                          <div className="absolute top-1 left-1 bg-emerald-600/80 text-white text-[8px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Salva</div>
+                        )}
+
+                        <input
+                          type="text" value={foto.caption} onChange={e => updateFotoCaption(foto.id, e.target.value)} placeholder="Legenda..."
+                          className="absolute bottom-0 w-full bg-slate-900/90 text-[10px] px-2 py-1 outline-none placeholder:text-slate-500"
+                          readOnly={isOriginal && isEditing}
+                        />
+                      </div>
+                    );
+                  })}
                   <label className="aspect-video bg-slate-800/50 hover:bg-slate-800 border border-slate-700 border-dashed rounded text-slate-500 hover:text-blue-400 flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors">
                     <Camera size={20} />
                     <span className="text-[10px] font-bold uppercase">Adicionar</span>
@@ -732,9 +831,9 @@ function DailyReportApp() {
                 </div>
               </div>
 
-              {/* 7. Ações do RDO (Mobile) */}
-              {role !== 'leitura' && (
-                <div className="space-y-4 pt-6 mt-6 border-t border-slate-800/50 lg:hidden">
+              {/* 7. Ações do RDO (Mobile) — Predefinições só aparecem em modo criação */}
+              {role !== 'leitura' && !isEditing && (
+                <div className="px-6 space-y-4 pt-6 mt-6 border-t border-slate-800/50 lg:hidden">
                   <h2 className="text-xs font-bold uppercase tracking-widest text-blue-400">Predefinições</h2>
                   <div className="flex gap-2">
                     <button onClick={saveTemplate} className="flex-1 px-4 py-3 bg-slate-800 hover:bg-slate-700 rounded-md text-[11px] font-bold uppercase tracking-widest transition-colors border border-slate-700 text-slate-300">
@@ -746,9 +845,6 @@ function DailyReportApp() {
                   </div>
                 </div>
               )}
-
-
-            </fieldset>
           </aside>
 
           {/* ================= RIGHT SIDE: A4 PREVIEW ================= */}
@@ -774,12 +870,21 @@ function DailyReportApp() {
               {viewMode === 'form' ? 'Ver A4' : 'Editar Form'}
             </button>
             {viewMode === 'form' && role !== 'leitura' && (
+              isEditing ? (
                <button
-                 onClick={handleSaveToDatabase} disabled={isSaving || isEditing}
+                 onClick={handleSavePhotosToExistingRDO} disabled={isSaving}
+                 className="flex-[1.5] bg-amber-600 hover:bg-amber-500 text-white text-[11px] font-bold uppercase tracking-widest py-3 rounded shadow-lg shadow-amber-900/20 disabled:opacity-50"
+               >
+                 {isSaving ? 'Salvando...' : '📷 Salvar Fotos'}
+               </button>
+              ) : (
+               <button
+                 onClick={handleSaveToDatabase} disabled={isSaving}
                  className="flex-[1.5] bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold uppercase tracking-widest py-3 rounded shadow-lg shadow-emerald-900/20 disabled:opacity-50"
                >
                  {isSaving ? 'Salvando...' : 'Salvar RDO'}
                </button>
+              )
             )}
             {viewMode === 'preview' && (
               <button
