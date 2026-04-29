@@ -418,15 +418,12 @@ function DailyReportApp() {
                 <button onClick={loadTemplate} className="hidden lg:block px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-md text-[11px] font-bold uppercase tracking-widest transition-colors border border-slate-700 text-slate-300 mr-2">
                   Carregar Modelo
                 </button>
-                <button className="hidden sm:block px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-md text-[11px] font-bold uppercase tracking-widest transition-colors border border-slate-700">
-                  Configurações
-                </button>
-                <button onClick={handleSaveToDatabase} disabled={isSaving || isEditing} className="hidden sm:block px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-md text-[11px] font-bold uppercase tracking-widest transition-colors text-white mr-2 disabled:opacity-50">
+                <button onClick={handleSaveToDatabase} disabled={isSaving || isEditing} className="hidden lg:block px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-md text-[11px] font-bold uppercase tracking-widest transition-colors text-white mr-2 disabled:opacity-50">
                   {isSaving ? 'Salvando...' : 'Salvar RDO'}
                 </button>
               </>
             )}
-            <button onClick={handlePrint} className="px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-md text-sm font-bold shadow-lg shadow-blue-900/20 transition-all text-white">
+            <button onClick={handlePrint} className="hidden lg:block px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-md text-sm font-bold shadow-lg shadow-blue-900/20 transition-all text-white">
               GERAR PDF
             </button>
           </div>
@@ -687,6 +684,22 @@ function DailyReportApp() {
                 </div>
               </div>
 
+              {/* 7. Ações do RDO (Mobile) */}
+              {role !== 'leitura' && (
+                <div className="space-y-4 pt-6 mt-6 border-t border-slate-800/50 lg:hidden">
+                  <h2 className="text-xs font-bold uppercase tracking-widest text-blue-400">Predefinições</h2>
+                  <div className="flex gap-2">
+                    <button onClick={saveTemplate} className="flex-1 px-4 py-3 bg-slate-800 hover:bg-slate-700 rounded-md text-[11px] font-bold uppercase tracking-widest transition-colors border border-slate-700 text-slate-300">
+                      Salvar Modelo
+                    </button>
+                    <button onClick={loadTemplate} className="flex-1 px-4 py-3 bg-slate-800 hover:bg-slate-700 rounded-md text-[11px] font-bold uppercase tracking-widest transition-colors border border-slate-700 text-slate-300">
+                      Carregar Modelo
+                    </button>
+                  </div>
+                </div>
+              )}
+
+
             </fieldset>
           </aside>
 
@@ -708,16 +721,24 @@ function DailyReportApp() {
           <div className="absolute bottom-0 left-0 right-0 p-4 bg-slate-900/90 backdrop-blur-lg border-t border-slate-800 z-40 lg:hidden flex gap-2">
             <button
               onClick={() => setViewMode(viewMode === 'form' ? 'preview' : 'form')}
-              className="flex-1 bg-slate-800 border border-slate-700 hover:bg-slate-700 text-sm font-bold uppercase tracking-widest py-3 rounded text-slate-300 transition-colors"
+              className="flex-1 bg-slate-800 border border-slate-700 hover:bg-slate-700 text-[11px] font-bold uppercase tracking-widest py-3 rounded text-slate-300 transition-colors"
             >
-              {viewMode === 'form' ? 'Ver A4' : 'Editar'}
+              {viewMode === 'form' ? 'Ver A4' : 'Editar Form'}
             </button>
+            {viewMode === 'form' && role !== 'leitura' && (
+               <button
+                 onClick={handleSaveToDatabase} disabled={isSaving || isEditing}
+                 className="flex-[1.5] bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold uppercase tracking-widest py-3 rounded shadow-lg shadow-emerald-900/20 disabled:opacity-50"
+               >
+                 {isSaving ? 'Salvando...' : 'Salvar RDO'}
+               </button>
+            )}
             {viewMode === 'preview' && (
               <button
                 onClick={handlePrint}
-                className="flex-1 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold uppercase tracking-widest py-3 rounded shadow-lg shadow-blue-900/20"
+                className="flex-[1.5] bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold uppercase tracking-widest py-3 rounded shadow-lg shadow-blue-900/20"
               >
-                Imprimir
+                Gerar PDF
               </button>
             )}
           </div>
