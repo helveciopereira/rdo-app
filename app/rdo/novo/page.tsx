@@ -84,6 +84,7 @@ function DailyReportApp() {
   const [report, setReport] = useState<ReportState>(INITIAL_STATE);
   const [viewMode, setViewMode] = useState<'form' | 'preview'>(isEditing ? 'preview' : 'form');
   const [isLoaded, setIsLoaded] = useState(false);
+  const [errorState, setErrorState] = useState<string | null>(null);
 
   useEffect(() => {
     if (isEditing) {
@@ -110,6 +111,9 @@ function DailyReportApp() {
   }, [rdoId, isEditing]);
 
   const fetchLastRDO = async () => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
     try {
       const { data: lastRdo, error } = await supabase
         .from('relatorios')
@@ -121,6 +125,7 @@ function DailyReportApp() {
         `)
         .order('data_relatorio', { ascending: false })
         .limit(1)
+        .abortSignal(controller.signal)
         .single();
 
       if (lastRdo && !error) {
@@ -145,14 +150,21 @@ function DailyReportApp() {
             })) || prev.servicos,
         }));
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Nenhum RDO anterior ou erro ao buscar:", err);
+      if (err.name === 'AbortError' || err.message?.includes('aborted')) {
+        setErrorState('A conexão com o servidor expirou. Tente recarregar a página.');
+      }
     } finally {
+      clearTimeout(timeoutId);
       setIsLoaded(true);
     }
   };
 
   const fetchRDO = async (id: string) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
     try {
       const { data: relatorio, error } = await supabase
         .from('relatorios')
@@ -164,6 +176,7 @@ function DailyReportApp() {
           registros_fotograficos (*)
         `)
         .eq('id', id)
+        .abortSignal(controller.signal)
         .single();
 
       if (error) throw error;
@@ -183,10 +196,15 @@ function DailyReportApp() {
           fotos: relatorio.registros_fotograficos.map((f: any) => ({ id: f.id, url: f.imagem_url, caption: f.legenda }))
         });
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erro ao buscar RDO:", err);
-      alert('Não foi possível carregar este relatório.');
+      if (err.name === 'AbortError' || err.message?.includes('aborted')) {
+        setErrorState('A conexão com o servidor expirou. Tente recarregar a página.');
+      } else {
+        setErrorState('Não foi possível carregar este relatório.');
+      }
     } finally {
+      clearTimeout(timeoutId);
       setIsLoaded(true);
     }
   };
@@ -397,6 +415,34 @@ function DailyReportApp() {
   return (
     <ProtectedRoute>
       <div className="no-print h-screen flex flex-col overflow-hidden bg-slate-950 font-sans text-slate-200">
+        
+        {/* Loading/Error Overlay */}
+        {(!isLoaded || errorState) && (
+          <div className="fixed inset-0 z-[100] bg-slate-950/90 backdrop-blur-sm flex items-center justify-center p-6 text-center">
+            {errorState ? (
+              <div className="max-w-sm w-full bg-slate-900 border border-slate-800 p-8 rounded-2xl shadow-2xl space-y-6">
+                <div className="w-16 h-16 bg-red-900/20 text-red-500 rounded-full flex items-center justify-center mx-auto">
+                  <AlertTriangle size={32} />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-lg font-bold text-white">Falha na Inicialização</h3>
+                  <p className="text-sm text-slate-400">{errorState}</p>
+                </div>
+                <button 
+                  onClick={() => window.location.reload()}
+                  className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition-colors uppercase tracking-widest text-xs"
+                >
+                  Tentar Novamente
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                <p className="text-sm font-bold uppercase tracking-[0.2em] text-blue-500 animate-pulse">Iniciando RDO...</p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Header Navigation (Editorial Aesthetic) */}
         <nav className="h-16 border-b border-slate-800 bg-slate-900/50 backdrop-blur-md flex items-center justify-between px-4 md:px-8 shrink-0 z-10">

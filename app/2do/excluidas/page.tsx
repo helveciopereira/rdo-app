@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/src/lib/supabase';
 import ProtectedRoute from '@/src/components/ProtectedRoute';
 import { useAuth } from '@/src/contexts/AuthContext';
-import { ArrowLeft, ListTodo, Trash2, Undo2 } from 'lucide-react';
+import { ArrowLeft, ListTodo, Trash2, Undo2, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface Tarefa {
@@ -18,27 +18,41 @@ interface Tarefa {
 export default function Do2ExcluidasPage() {
   const [tarefas, setTarefas] = useState<Tarefa[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorState, setErrorState] = useState<string | null>(null);
   const { user } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    fetchTarefas();
-  }, [user]);
+    if (user?.id) fetchTarefas();
+  }, [user?.id]);
 
   const fetchTarefas = async () => {
     if (!user) return;
+    setLoading(true);
+    setErrorState(null);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
     try {
       const { data, error } = await supabase
         .from('tarefas')
         .select('*')
         .eq('status', 'EXCLUIDA')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .abortSignal(controller.signal);
 
       if (error) throw error;
       setTarefas(data || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao buscar tarefas excluídas:', error);
+      if (error.name === 'AbortError' || error.message?.includes('aborted')) {
+        setErrorState('A conexão demorou muito para responder. Tente novamente.');
+      } else {
+        setErrorState('Falha ao comunicar com o servidor.');
+      }
     } finally {
+      clearTimeout(timeoutId);
       setLoading(false);
     }
   };
@@ -85,7 +99,7 @@ export default function Do2ExcluidasPage() {
           </div>
           <div className="flex items-center gap-4">
             <button 
-              onClick={() => router.push('/2do')}
+              onClick={() => window.history.length > 1 ? router.back() : router.push('/2do')}
               className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-xs font-bold uppercase tracking-widest transition-colors border border-slate-700"
             >
               <ArrowLeft size={14} /> Voltar ao 2Do
@@ -106,7 +120,26 @@ export default function Do2ExcluidasPage() {
           <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-2xl flex-1 flex flex-col">
             <div className="p-2 flex-1 overflow-y-auto">
               {loading ? (
-                <div className="p-8 text-center text-slate-500">Carregando lixeira...</div>
+                <div className="p-12 flex flex-col items-center justify-center text-slate-500 gap-3">
+                  <div className="w-6 h-6 border-2 border-red-500 border-t-transparent rounded-full animate-spin"></div>
+                  <span className="text-xs uppercase tracking-widest font-medium">Carregando lixeira...</span>
+                </div>
+              ) : errorState ? (
+                <div className="p-12 text-center flex flex-col items-center gap-4">
+                  <div className="p-3 bg-red-900/20 rounded-full text-red-500">
+                    <X size={24} />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-bold text-red-400">Ops, algo deu errado.</p>
+                    <p className="text-xs text-slate-500">{errorState}</p>
+                  </div>
+                  <button 
+                    onClick={() => window.location.reload()}
+                    className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded text-xs font-bold border border-slate-700 uppercase tracking-widest transition-colors"
+                  >
+                    Tentar Novamente
+                  </button>
+                </div>
               ) : tarefas.length === 0 ? (
                 <div className="p-8 text-center text-slate-500 flex flex-col items-center">
                   <Trash2 size={32} className="mb-3 opacity-20 text-red-500" />

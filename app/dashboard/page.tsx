@@ -145,7 +145,7 @@ export default function DashboardPage() {
           <div className="flex items-center gap-4">
             <span className="text-xs text-slate-400 hidden sm:block">{user?.email}</span>
             <button 
-              onClick={() => router.push('/hub')}
+              onClick={() => window.history.length > 1 ? router.back() : router.push('/hub')}
               className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-xs font-bold uppercase tracking-widest transition-colors border border-slate-700"
             >
               <ArrowLeft size={14} /> Voltar
@@ -154,45 +154,47 @@ export default function DashboardPage() {
         </nav>
 
         <main className="flex-1 max-w-5xl w-full mx-auto p-4 md:p-8">
-          <div className="flex justify-between items-center mb-8">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-8">
             <div>
               <h1 className="text-2xl font-bold text-white">Histórico de RDOs</h1>
               <p className="text-sm text-slate-400 mt-1">Gerencie os relatórios diários das suas obras.</p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
               {availableMonths.length > 0 && (
                 <select 
                   onChange={handleSelectMonth}
-                  className="bg-slate-800 text-slate-300 px-3 py-2 rounded-md text-sm border border-slate-700 outline-none focus:ring-1 focus:ring-blue-500"
+                  className="bg-slate-800 text-slate-300 px-3 py-2 rounded-md text-sm border border-slate-700 outline-none focus:ring-1 focus:ring-blue-500 min-w-[140px]"
                 >
                   <option value="">Selecionar Mês...</option>
                   {availableMonths.map(m => <option key={m} value={m}>{m}</option>)}
                 </select>
               )}
-              {selectedIds.length > 0 && (
-                <button 
-                  onClick={handleGerarLote}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-md text-sm font-bold shadow-lg shadow-emerald-900/20 flex items-center gap-2 uppercase tracking-widest transition-colors"
-                >
-                  <Printer size={16} /> Lote ({selectedIds.length})
-                </button>
-              )}
-              {role === 'master' && (
-                <button 
-                  onClick={fetchLogs}
-                  className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-md text-sm font-bold shadow-lg flex items-center gap-2 uppercase tracking-widest transition-colors border border-slate-700"
-                >
-                  <History size={16} /> Logs
-                </button>
-              )}
-              {role !== 'leitura' && (
-                <button 
-                  onClick={() => router.push('/rdo/novo')}
-                  className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-md text-sm font-bold shadow-lg shadow-blue-900/20 flex items-center gap-2 uppercase tracking-widest transition-colors"
-                >
-                  <Plus size={16} /> Novo RDO
-                </button>
-              )}
+              <div className="flex items-center gap-2 flex-wrap">
+                {selectedIds.length > 0 && (
+                  <button 
+                    onClick={handleGerarLote}
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-md text-sm font-bold shadow-lg shadow-emerald-900/20 flex items-center gap-2 uppercase tracking-widest transition-colors"
+                  >
+                    <Printer size={16} /> Lote ({selectedIds.length})
+                  </button>
+                )}
+                {role === 'master' && (
+                  <button 
+                    onClick={fetchLogs}
+                    className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-md text-sm font-bold shadow-lg flex items-center gap-2 uppercase tracking-widest transition-colors border border-slate-700"
+                  >
+                    <History size={16} /> Logs
+                  </button>
+                )}
+                {role !== 'leitura' && (
+                  <button 
+                    onClick={() => router.push('/rdo/novo')}
+                    className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-md text-sm font-bold shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2 uppercase tracking-widest transition-colors whitespace-nowrap"
+                  >
+                    <Plus size={16} /> Novo RDO
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 

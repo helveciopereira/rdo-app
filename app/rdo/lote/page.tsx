@@ -90,7 +90,7 @@ export default function LotePage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-[#10131c] relative flex flex-col pb-32">
+      <div className="min-h-screen bg-[#10131c] print:bg-white relative flex flex-col pb-32 print:pb-0">
         {/* Floating Actions (Hidden in Print) */}
         <div className="fixed top-4 left-0 right-0 flex justify-center gap-4 z-50 print:hidden pointer-events-none">
           <div className="pointer-events-auto flex items-center gap-2 bg-slate-900/90 backdrop-blur-md p-2 rounded-lg border border-slate-700 shadow-2xl">

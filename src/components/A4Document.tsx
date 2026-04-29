@@ -94,7 +94,7 @@ export const A4Page = ({ data, showMain, fotos, pageNum, totalPages }: { data: R
   };
 
   return (
-    <div className="w-[210mm] min-h-[297mm] bg-white text-slate-900 shadow-2xl mx-auto flex flex-col p-10 ring-1 ring-black/10 origin-top print:shadow-none print:w-full print:h-[auto] print:m-0 print:p-[5mm] print:ring-0 text-[11px] leading-relaxed relative print:break-after-page page-break-after-always shrink-0">
+    <div className="w-[210mm] min-h-[297mm] bg-white text-slate-900 shadow-2xl mx-auto flex flex-col p-10 ring-1 ring-black/10 origin-top print:shadow-none print:w-full print:min-h-[277mm] print:h-[277mm] print:m-0 print:p-[5mm] print:ring-0 text-[11px] leading-relaxed relative print:break-after-page page-break-after-always shrink-0">
       <div className="absolute top-4 left-1/2 -translate-x-1/2 text-slate-300 text-[8px] font-mono tracking-widest print:hidden">VISUALIZAÇÃO A4 - PÁGINA {pageNum}</div>
 
       {/* Header */}
@@ -111,14 +111,14 @@ export const A4Page = ({ data, showMain, fotos, pageNum, totalPages }: { data: R
           </div>
         </div>
         <div className="text-right flex flex-col items-end">
-          <div className="text-[10px] font-bold bg-slate-100 px-3 py-1 mb-2 border border-slate-200 tracking-widest text-slate-700">v1.22</div>
+          <div className="text-[10px] font-bold bg-slate-100 px-3 py-1 mb-2 border border-slate-200 tracking-widest text-slate-700">v1.36</div>
           <p className="text-[10px] uppercase font-bold text-slate-800">Data: {formatDate(data.data)}</p>
           <p className="text-[9px] text-slate-500 mt-1 uppercase font-semibold">Clima: M: {getCondText(data.climaManha)} / T: {getCondText(data.climaTarde)}</p>
         </div>
       </header>
 
       {/* Info Blocks */}
-      <section className="flex-1 flex flex-col">
+      <section className="flex-1 flex flex-col print:bg-white">
         {showMain && (
           <>
             <div className="mb-8 shrink-0">
